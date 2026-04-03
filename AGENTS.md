@@ -53,6 +53,12 @@ neiry_kit/
 
 | Document | Path | Description |
 |----------|------|-------------|
+| README | README.md | Project landing page |
+| Device lifecycle | docs/device-lifecycle.md | Search, connect, start, stop |
+| Data streams | docs/data-streams.md | EEG, PSD, artifacts, resistance, battery |
+| Classifiers | docs/classifiers.md | NFB, physio, emotions, productivity, cardio |
+| NFB calibration | docs/calibration.md | 4-stage pipeline, quick mode, IndividualNfbData |
+| Example app | docs/example-app.md | What the example app covers and how to use it |
 | CLAUDE.md | CLAUDE.md | Agent instructions, SDK concepts, integration flow |
 | SDK API reference | official/Docs/html/ | Doxygen HTML, authoritative C API docs |
 
