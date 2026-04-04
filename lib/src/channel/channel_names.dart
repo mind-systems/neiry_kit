@@ -51,6 +51,10 @@ abstract final class NeiryEvents {
       'neiry_kit/events/productivityCalibrationProgress';
   static const String productivityCalibrated =
       'neiry_kit/events/productivityCalibrated';
+  static const String productivityBaselines =
+      'neiry_kit/events/productivityBaselines';
+  static const String productivityIndividualNfb =
+      'neiry_kit/events/productivityIndividualNfb';
   // NOTE: exact native callback name for cardio calibration needs confirmation
   // from _c_cardio_8h when implementing iOS/Android bridges.
   static const String cardioCalibratedEvent =
