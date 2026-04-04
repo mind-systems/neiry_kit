@@ -15,6 +15,7 @@ exposing device discovery, EEG streaming, and classifier APIs via platform chann
   s.author           = { 'Neiry' => 'dev@neiry.com' }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
+  s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'
   s.platform = :ios, '13.0'
 
