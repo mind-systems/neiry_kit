@@ -45,6 +45,8 @@ abstract final class NeiryEvents {
       'neiry_kit/events/physiologicalCalibrationProgress';
   static const String physiologicalCalibrated =
       'neiry_kit/events/physiologicalCalibrated';
+  static const String physiologicalIndividualNfb =
+      'neiry_kit/events/physiologicalIndividualNfb';
   static const String productivityCalibrationProgress =
       'neiry_kit/events/productivityCalibrationProgress';
   static const String productivityCalibrated =

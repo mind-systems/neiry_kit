@@ -1,4 +1,5 @@
 export 'src/api/classifiers/nfb_classifier.dart';
+export 'src/api/classifiers/physio_classifier.dart';
 export 'src/api/device.dart';
 export 'src/api/device_locator.dart';
 export 'src/channel/channel_names.dart';
