@@ -1,3 +1,4 @@
+export 'src/api/classifiers/emotions_classifier.dart';
 export 'src/api/classifiers/nfb_classifier.dart';
 export 'src/api/classifiers/physio_classifier.dart';
 export 'src/api/device.dart';
