@@ -55,14 +55,17 @@ void main() {
       NeiryEvents.nfbError,
       NeiryEvents.emotionsError,
       NeiryEvents.productivityError,
+      NeiryEvents.physiologicalIndividualNfb,
+      NeiryEvents.productivityBaselines,
+      NeiryEvents.productivityIndividualNfb,
     ];
 
     test('no duplicates', () {
       expect(ids.length, equals(Set<String>.from(ids).length));
     });
 
-    test('count is 26', () {
-      expect(ids.length, equals(26));
+    test('count is 29', () {
+      expect(ids.length, equals(29));
     });
   });
 
@@ -97,8 +100,11 @@ void main() {
       NeiryEvents.nfbCalibration,
       NeiryEvents.physiologicalCalibrationProgress,
       NeiryEvents.physiologicalCalibrated,
+      NeiryEvents.physiologicalIndividualNfb,
       NeiryEvents.productivityCalibrationProgress,
       NeiryEvents.productivityCalibrated,
+      NeiryEvents.productivityBaselines,
+      NeiryEvents.productivityIndividualNfb,
       NeiryEvents.cardioCalibratedEvent,
       NeiryEvents.error,
       NeiryEvents.nfbError,
@@ -162,6 +168,7 @@ void main() {
     final names = [
       ClassifierMethods.create,
       ClassifierMethods.createCalibrated,
+      ClassifierMethods.dispose,
       ClassifierMethods.startBaselineCalibration,
       ClassifierMethods.stopBaselineCalibration,
       ClassifierMethods.importBaselines,
