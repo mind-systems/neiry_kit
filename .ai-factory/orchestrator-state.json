@@ -2,6 +2,7 @@
   "implement_reviews": [
     "01-dart-channel-contract-review-1.md",
     "01-dart-channel-contract-review-2.md",
-    "02-sentinel-helper-exceptions-review-1.md"
+    "02-sentinel-helper-exceptions-review-1.md",
+    "03-scalar-signal-models-review-1.md"
   ]
 }
