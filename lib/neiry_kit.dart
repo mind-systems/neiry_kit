@@ -5,6 +5,7 @@ export 'src/api/classifiers/physio_classifier.dart';
 export 'src/api/classifiers/productivity_classifier.dart';
 export 'src/api/device.dart';
 export 'src/api/device_locator.dart';
+export 'src/api/nfb_calibrator.dart';
 export 'src/channel/channel_names.dart';
 export 'src/channel/enums.dart';
 export 'src/models/calibration_event.dart';
