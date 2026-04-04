@@ -117,7 +117,10 @@ void main() {
 
   group('DeviceLocatorMethods — unique', () {
     final names = [
-      DeviceLocatorMethods.requestDevices,
+      DeviceLocatorMethods.create,
+      DeviceLocatorMethods.createDevice,
+      DeviceLocatorMethods.dispose,
+      DeviceLocatorMethods.update,
       DeviceLocatorMethods.setSingleThreaded,
       DeviceLocatorMethods.setLogLevel,
       DeviceLocatorMethods.getVersionString,
@@ -191,6 +194,7 @@ void main() {
   group('NeiryArgs — unique', () {
     final keys = [
       NeiryArgs.serial,
+      NeiryArgs.logDirectory,
       NeiryArgs.deviceType,
       NeiryArgs.searchTime,
       NeiryArgs.mode,

@@ -1,3 +1,4 @@
+export 'src/api/device_locator.dart';
 export 'src/channel/channel_names.dart';
 export 'src/channel/enums.dart';
 export 'src/models/calibration_event.dart';

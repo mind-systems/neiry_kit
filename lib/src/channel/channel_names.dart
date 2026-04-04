@@ -65,7 +65,10 @@ abstract final class NeiryEvents {
 
 /// Method names for the DeviceLocator MethodChannel.
 abstract final class DeviceLocatorMethods {
-  static const String requestDevices = 'requestDevices';
+  static const String create = 'create';
+  static const String createDevice = 'createDevice';
+  static const String dispose = 'dispose';
+  static const String update = 'update';
   static const String setSingleThreaded = 'setSingleThreaded';
   static const String setLogLevel = 'setLogLevel';
   static const String getVersionString = 'getVersionString';
@@ -120,6 +123,7 @@ abstract final class NFBCalibratorMethods {
 /// Argument keys used in MethodChannel call Maps.
 abstract final class NeiryArgs {
   static const String serial = 'serial';
+  static const String logDirectory = 'logDirectory';
   static const String deviceType = 'deviceType';
   static const String searchTime = 'searchTime';
   static const String mode = 'mode';
