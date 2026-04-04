@@ -101,6 +101,7 @@ abstract final class DeviceMethods {
 abstract final class ClassifierMethods {
   static const String create = 'create';
   static const String createCalibrated = 'createCalibrated';
+  static const String dispose = 'dispose';
   static const String startBaselineCalibration = 'startBaselineCalibration';
   static const String stopBaselineCalibration = 'stopBaselineCalibration';
   static const String importBaselines = 'importBaselines';
