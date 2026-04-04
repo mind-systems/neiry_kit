@@ -205,6 +205,7 @@ void main() {
       NeiryArgs.calibratorData,
       NeiryArgs.channelName,
       NeiryArgs.index,
+      NeiryArgs.bipolarChannels,
     ];
 
     test('no duplicates', () {

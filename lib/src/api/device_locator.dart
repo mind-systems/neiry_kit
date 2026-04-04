@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../channel/channel_names.dart';
 import '../channel/enums.dart';
 import '../models/device_info.dart';
+import 'device.dart';
 
 /// Wraps the native `clCDeviceLocator` lifecycle — create, scan, create device,
 /// threading control, and dispose.
@@ -163,11 +164,11 @@ class DeviceLocator {
     return controller.stream;
   }
 
-  /// Tells the native side to create a device handle for [serial].
+  /// Creates and returns a [Device] for the given [serial].
   ///
-  /// The returned `Future` completes once the native call succeeds.
-  /// A [Device] wrapper (future milestone) will be built on top of this.
-  Future<void> createDevice(String serial) async {
+  /// Tells the native side to allocate the device handle, then wraps it in a
+  /// [Device] instance that exposes the full lifecycle and streaming API.
+  Future<Device> createDevice(String serial) async {
     _checkNotDisposed();
     await _nativeReady;
     _checkReady();
@@ -175,6 +176,7 @@ class DeviceLocator {
       DeviceLocatorMethods.createDevice,
       {NeiryArgs.serial: serial},
     );
+    return Device(serial: serial);
   }
 
   /// Controls whether SDK callbacks fire on a background thread (default) or

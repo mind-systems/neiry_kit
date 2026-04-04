@@ -134,4 +134,5 @@ abstract final class NeiryArgs {
   static const String calibratorData = 'calibratorData';
   static const String channelName = 'channelName';
   static const String index = 'index';
+  static const String bipolarChannels = 'bipolarChannels';
 }

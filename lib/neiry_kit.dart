@@ -1,9 +1,12 @@
+export 'src/api/device.dart';
 export 'src/api/device_locator.dart';
 export 'src/channel/channel_names.dart';
 export 'src/channel/enums.dart';
 export 'src/models/calibration_event.dart';
 export 'src/models/calibration_stage.dart';
 export 'src/models/device_info.dart';
+export 'src/models/eeg_artifact_data.dart';
+export 'src/models/eeg_data.dart';
 export 'src/models/emotions_states.dart';
 export 'src/models/individual_nfb_data.dart';
 export 'src/models/neiry_error.dart';
@@ -15,3 +18,5 @@ export 'src/models/physio_states.dart';
 export 'src/models/productivity_baselines.dart';
 export 'src/models/productivity_indexes.dart';
 export 'src/models/productivity_metrics.dart';
+export 'src/models/psd_data.dart';
+export 'src/models/resistance_data.dart';
