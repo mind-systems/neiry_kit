@@ -283,6 +283,15 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
 
     private func registerEventChannels() {
         let messenger = registrar.messenger()
+
+        // Build lookup for the 8 live device stream handlers
+        var deviceHandlers: [String: FlutterStreamHandler] = [:]
+        if let bridge = deviceBridge {
+            for (id, handler) in bridge.allStreamHandlers() {
+                deviceHandlers[id] = handler
+            }
+        }
+
         let ids: [String] = [
             "neiry_kit/events/deviceList",
             "neiry_kit/events/eeg",
@@ -318,6 +327,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             let channel = FlutterEventChannel(name: id, binaryMessenger: messenger)
             if id == "neiry_kit/events/deviceList" {
                 channel.setStreamHandler(deviceLocatorBridge)
+            } else if let handler = deviceHandlers[id] {
+                channel.setStreamHandler(handler)
             } else {
                 channel.setStreamHandler(StubStreamHandler())
             }
