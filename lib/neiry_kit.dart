@@ -21,6 +21,7 @@ export 'src/models/neiry_error_code.dart';
 export 'src/models/neiry_exception.dart';
 export 'src/models/nfb_calibration_fail_reason.dart';
 export 'src/models/nfb_user_state.dart';
+export 'src/models/physio_baselines.dart';
 export 'src/models/physio_states.dart';
 export 'src/models/ppg_data.dart';
 export 'src/models/productivity_baselines.dart';

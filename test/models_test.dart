@@ -186,6 +186,69 @@ void main() {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
+  // PhysiologicalStatesBaselines.fromMap — round-trip + sentinels
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('PhysiologicalStatesBaselines.fromMap — round-trip + sentinels', () {
+    test('all fields -1 / -1.0 → all null', () {
+      final baselines = PhysiologicalStatesBaselines.fromMap({
+        'ts': -1,
+        'alpha': -1.0,
+        'beta': -1.0,
+        'alphaGravity': -1.0,
+        'betaGravity': -1.0,
+        'concentration': -1.0,
+      });
+      expect(baselines.timestamp, isNull);
+      expect(baselines.alpha, isNull);
+      expect(baselines.beta, isNull);
+      expect(baselines.alphaGravity, isNull);
+      expect(baselines.betaGravity, isNull);
+      expect(baselines.concentration, isNull);
+    });
+
+    test('valid values → fromMap → toMap round-trip', () {
+      final map = <Object?, Object?>{
+        'ts': 1000,
+        'alpha': 0.5,
+        'beta': 0.6,
+        'alphaGravity': 0.7,
+        'betaGravity': 0.8,
+        'concentration': 0.9,
+      };
+      final baselines = PhysiologicalStatesBaselines.fromMap(map);
+      final result = baselines.toMap();
+      expect(result['ts'], 1000);
+      expect(result['alpha'], 0.5);
+      expect(result['beta'], 0.6);
+      expect(result['alphaGravity'], 0.7);
+      expect(result['betaGravity'], 0.8);
+      expect(result['concentration'], 0.9);
+    });
+
+    test('mixed: some valid, some sentinel', () {
+      final baselines = PhysiologicalStatesBaselines.fromMap({
+        'ts': 2000,
+        'alpha': 0.5,
+        'beta': -1.0,
+        'alphaGravity': -1.0,
+        'betaGravity': 0.8,
+        'concentration': -1.0,
+      });
+      expect(baselines.timestamp, DateTime.fromMillisecondsSinceEpoch(2000));
+      expect(baselines.alpha, 0.5);
+      expect(baselines.beta, isNull);
+      expect(baselines.alphaGravity, isNull);
+      expect(baselines.betaGravity, 0.8);
+      expect(baselines.concentration, isNull);
+      final result = baselines.toMap();
+      expect(result['beta'], -1.0);
+      expect(result['alphaGravity'], -1.0);
+      expect(result['concentration'], -1.0);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
   // EmotionsStates.fromMap — sentinel fields become null
   // ─────────────────────────────────────────────────────────────────────────
 

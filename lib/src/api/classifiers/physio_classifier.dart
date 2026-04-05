@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../device.dart';
 import '../../channel/channel_names.dart';
+import '../../models/physio_baselines.dart';
 import '../../models/physio_states.dart';
 import '../../models/nfb_user_state.dart';
 
@@ -19,10 +20,10 @@ import '../../models/nfb_user_state.dart';
 /// // Start baseline calibration to improve accuracy:
 /// await classifier.startBaselineCalibration();
 /// classifier.calibrationProgress.listen((p) { /* 0.0–1.0 */ });
-/// classifier.calibrated.listen((baselines) { /* opaque blob, save for later */ });
+/// classifier.calibrated.listen((baselines) { /* PhysiologicalStatesBaselines, save for later */ });
 ///
 /// // Or import previously saved baselines:
-/// await classifier.importBaselines(savedBlob);
+/// await classifier.importBaselines(savedBaselines);
 ///
 /// // Release when done:
 /// await classifier.dispose();
@@ -86,9 +87,9 @@ class PhysioClassifier {
     (map) => (map['progress'] as num).toDouble(),
   );
 
-  late final Stream<Uint8List> _calibrated = _eventStream(
+  late final Stream<PhysiologicalStatesBaselines> _calibrated = _eventStream(
     const EventChannel(NeiryEvents.physiologicalCalibrated),
-    (map) => map['baselines'] as Uint8List,
+    PhysiologicalStatesBaselines.fromMap,
   );
 
   late final Stream<NfbUserState> _individualNfbStream = _eventStream(
@@ -136,10 +137,11 @@ class PhysioClassifier {
     return _calibrationProgress;
   }
 
-  /// Emits once when baseline calibration completes, carrying the opaque
-  /// baselines blob. Persist this blob and pass it to [importBaselines] on
-  /// subsequent sessions to skip re-calibration.
-  Stream<Uint8List> get calibrated {
+  /// Emits once when baseline calibration completes, carrying the structured
+  /// baselines data (`PhysiologicalStatesBaselines`). Persist this data (e.g.
+  /// via `toMap()` + JSON) and pass it to [importBaselines] on subsequent
+  /// sessions to skip re-calibration.
+  Stream<PhysiologicalStatesBaselines> get calibrated {
     _checkNotDisposed();
     _checkReady();
     return _calibrated;
@@ -168,15 +170,15 @@ class PhysioClassifier {
     );
   }
 
-  /// Imports previously saved [data] baselines into the native classifier,
-  /// allowing it to skip calibration and produce valid outputs immediately.
-  Future<void> importBaselines(Uint8List data) async {
+  /// Imports previously saved [baselines] into the native classifier, allowing
+  /// it to skip calibration and produce valid outputs immediately.
+  Future<void> importBaselines(PhysiologicalStatesBaselines baselines) async {
     _checkNotDisposed();
     await _nativeReady;
     _checkReady();
     await _channel.invokeMethod<void>(
       ClassifierMethods.importBaselines,
-      {NeiryArgs.serial: _serial, NeiryArgs.baselines: data},
+      {NeiryArgs.serial: _serial, NeiryArgs.baselines: baselines.toMap()},
     );
   }
 
