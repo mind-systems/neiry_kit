@@ -7,6 +7,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private let registrar: FlutterPluginRegistrar
     private var methodChannels: [String: FlutterMethodChannel] = [:]
     private var eventChannels: [String: FlutterEventChannel] = [:]
+    private var deviceLocatorBridge: DeviceLocatorBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -16,6 +17,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         let instance = NeiryKitPlugin(registrar: registrar)
         self.instance = instance
         instance.registerMethodChannels()
+        instance.deviceLocatorBridge = DeviceLocatorBridge()
         instance.registerEventChannels()
     }
 
@@ -44,14 +46,76 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
 
     private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult, channelId: String) {
         if channelId == "neiry_kit/device_locator" {
-            switch call.method {
-            case "getVersionString":
-                let version = String(cString: clCCapsule_GetVersionString())
-                result(version)
-            default:
-                result(FlutterMethodNotImplemented)
-            }
+            handleDeviceLocatorCall(call, result: result)
         } else {
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    // MARK: - device_locator dispatch
+
+    private func handleDeviceLocatorCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let bridge = deviceLocatorBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "DeviceLocatorBridge not initialized", details: nil))
+            return
+        }
+        switch call.method {
+        case "getVersionString":
+            let version = String(cString: clCCapsule_GetVersionString())
+            result(version)
+        case "create":
+            let logDirectory = (call.arguments as? [String: Any])?["logDirectory"] as? String
+            do {
+                try bridge.create(logDirectory: logDirectory)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "createDevice":
+            guard let args = call.arguments as? [String: Any],
+                  let serial = args["serial"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing 'serial'", details: nil))
+                return
+            }
+            do {
+                let ret = try bridge.createDevice(serial: serial)
+                result(ret)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "setSingleThreaded":
+            guard let args = call.arguments as? [String: Any],
+                  let enabled = args["enabled"] as? Bool else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing 'enabled'", details: nil))
+                return
+            }
+            bridge.setSingleThreaded(enabled: enabled)
+            result(nil)
+        case "update":
+            do {
+                try bridge.update()
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "setLogLevel":
+            guard let args = call.arguments as? [String: Any],
+                  let level = args["level"] as? Int else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing 'level'", details: nil))
+                return
+            }
+            bridge.setLogLevel(level: level)
+            result(nil)
+        case "dispose":
+            bridge.dispose()
+            result(nil)
+        default:
             result(FlutterMethodNotImplemented)
         }
     }
@@ -93,7 +157,11 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         ]
         for id in ids {
             let channel = FlutterEventChannel(name: id, binaryMessenger: messenger)
-            channel.setStreamHandler(StubStreamHandler())
+            if id == "neiry_kit/events/deviceList" {
+                channel.setStreamHandler(deviceLocatorBridge)
+            } else {
+                channel.setStreamHandler(StubStreamHandler())
+            }
             eventChannels[id] = channel
         }
     }
