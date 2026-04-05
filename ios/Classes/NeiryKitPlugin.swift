@@ -8,6 +8,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private var methodChannels: [String: FlutterMethodChannel] = [:]
     private var eventChannels: [String: FlutterEventChannel] = [:]
     private var deviceLocatorBridge: DeviceLocatorBridge?
+    private var deviceBridge: DeviceBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -18,6 +19,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         self.instance = instance
         instance.registerMethodChannels()
         instance.deviceLocatorBridge = DeviceLocatorBridge()
+        instance.deviceBridge = DeviceBridge()
         instance.registerEventChannels()
     }
 
@@ -47,6 +49,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult, channelId: String) {
         if channelId == "neiry_kit/device_locator" {
             handleDeviceLocatorCall(call, result: result)
+        } else if channelId == "neiry_kit/device" {
+            handleDeviceCall(call, result: result)
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -81,6 +85,10 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             }
             do {
                 let ret = try bridge.createDevice(serial: serial)
+                if let handle = DeviceLocatorBridge.devices[serial] {
+                    deviceBridge?.setDevice(serial: serial, handle: handle)
+                    DeviceLocatorBridge.devices.removeValue(forKey: serial)
+                }
                 result(ret)
             } catch let e as FlutterError {
                 result(e)
@@ -114,7 +122,158 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             result(nil)
         case "dispose":
             bridge.dispose()
+            deviceBridge?.release()
             result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    // MARK: - device dispatch
+
+    private func handleDeviceCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let bridge = deviceBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "DeviceBridge not initialized", details: nil))
+            return
+        }
+        switch call.method {
+        case "connect":
+            do {
+                try bridge.connect(call)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "disconnect":
+            do {
+                try bridge.disconnect()
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "start":
+            do {
+                try bridge.start()
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "stop":
+            do {
+                let ret = try bridge.stop()
+                result(ret)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getInfo":
+            do {
+                let info = try bridge.getInfo()
+                result(info)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getBatteryCharge":
+            do {
+                let charge = try bridge.getBatteryCharge()
+                result(charge)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getMode":
+            result(bridge.getMode())
+        case "getEEGSampleRate":
+            do {
+                let rate = try bridge.getEEGSampleRate()
+                result(rate)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getPPGSampleRate":
+            do {
+                let rate = try bridge.getPPGSampleRate()
+                result(rate)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getMEMSSampleRate":
+            do {
+                let rate = try bridge.getMEMSSampleRate()
+                result(rate)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getPPGIrAmplitude":
+            do {
+                let amplitude = try bridge.getPPGIrAmplitude()
+                result(amplitude)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getPPGRedAmplitude":
+            do {
+                let amplitude = try bridge.getPPGRedAmplitude()
+                result(amplitude)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getChannelNames":
+            do {
+                let names = try bridge.getChannelNames()
+                result(names)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getChannelsCount":
+            do {
+                let count = try bridge.getChannelsCount()
+                result(count)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getChannelIndexByName":
+            do {
+                let index = try bridge.getChannelIndexByName(call)
+                result(index)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getChannelNameByIndex":
+            do {
+                let name = try bridge.getChannelNameByIndex(call)
+                result(name)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
         default:
             result(FlutterMethodNotImplemented)
         }

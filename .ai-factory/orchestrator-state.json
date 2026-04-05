@@ -23,6 +23,8 @@
     "16-bridge-setup-spike-review-2.md",
     "17-devicelocatorbridge-review-1.md",
     "17-devicelocatorbridge-review-2.md",
-    "19-physiologicalstatesbaselines-model-physioclassifier-fix-review-1.md"
+    "19-physiologicalstatesbaselines-model-physioclassifier-fix-review-1.md",
+    "20-devicebridge-lifecycle-getters-review-1.md",
+    "20-devicebridge-lifecycle-getters-review-2.md"
   ]
 }
