@@ -83,8 +83,8 @@ baselines, calibrationData, calibratorData, channelName, index
 ### Connection State Enum Values
 `Disconnected=0, Connected=1, UnsupportedConnection=2`
 
-## Open Questions
+## Resolved
 
-- Cardio channel ID for calibration — docs show `cardioCalibratedEvent` but exact channel name needs confirmation from `_c_cardio_8h`
-- Device mode enum ordinal values need verification (Start/StopPPG indices conflict in different docs)
-- Single-threaded mode support: if enabled, Dart needs a `Timer` to call `update()` periodically — determine if this is in scope for v1
+- **Cardio calibration channel name:** `clCCardio_SetOnCalibratedEvent` confirmed in `CCardio.h:34`. Dart channel ID `NeiryEvents.cardioCalibratedEvent = 'neiry_kit/events/cardioCalibratedEvent'` is correct; remove the `NOTE:` comment in `channel_names.dart:58` when implementing `CardioBridge`.
+- **Device mode enum ordinal values:** Confirmed from `CDevice.h`. `StartPPG=5`, `StopPPG=6` — matches `NeiryDeviceMode` in `enums.dart:49–50` (comment on line 42 says "confirmed by CDevice.h").
+- **Single-threaded mode / `Update()`:** `clCDeviceLocator_Update` exists (`CDeviceLocator.h:77`). It is only needed when `SetSingleThreaded(true)` is called. Dart API exposes `DeviceLocator.update()` + `setSingleThreaded(bool)` — scope is already in v1.

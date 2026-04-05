@@ -130,6 +130,6 @@ class CardioClassifier {
 - `CardioData` fields: `heartRate`, `stressIndex`, `kaplanIndex`; quality flags: `hasArtifacts`, `skinContact`, `motionArtifacts`, `metricsAvailable`
 - Cardio is **5th classifier in v1** — included alongside NFB, Physio, Emotions, Productivity
 
-## Open Questions
+## Resolved
 
-- Whether `EmotionsClassifier` requires an active `NfbClassifier` instance to be created first, or just that the device is started (SDK handles NFB internally)
+- **`EmotionsClassifier` dependency:** No `NfbClassifier` required. `EmotionsClassifier(Device)` checks only `device.isStarted` — confirmed by implementation in `lib/src/api/classifiers/emotions_classifier.dart:36`.

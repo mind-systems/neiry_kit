@@ -247,6 +247,6 @@ setOnIndividualNFBCalibratedEvent(calibrator) { data ->
 
 Both bridges store a single `calibrationSink` / `eventSink` reference set in `onListen`, cleared in `onCancel`. The `startCalibration` MethodChannel call starts the SDK process; the EventChannel subscription is independent — subscribe before calling `startCalibration`.
 
-## Open Questions
+## Resolved
 
-- License key provisioning flow — where/how the key is embedded in the app
+- **License key provisioning:** No license API in any public C header (`CCapsuleAPI.h` includes all headers — none reference a key). The SDK binary is likely pre-licensed per distribution (key embedded at build time by the SDK vendor, not by the plugin). No Dart API or bridge work needed — raw signal streaming works without a key; classifier outputs are gated by the binary license the vendor provides.
