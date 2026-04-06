@@ -5,7 +5,7 @@ import UIKit
 
 /// A reusable FlutterStreamHandler that holds a single event sink and
 /// provides thread-safe helpers for dispatching data to Dart.
-private class DeviceStreamHandler: NSObject, FlutterStreamHandler {
+class DeviceStreamHandler: NSObject, FlutterStreamHandler {
 
     let channelId: String
     private var sink: FlutterEventSink?
@@ -94,7 +94,7 @@ class DeviceBridge: NSObject {
     // MARK: - Handle management
 
     /// Returns the stored device handle or throws if no device has been set.
-    private func requireDevice() throws -> OpaquePointer {
+    func requireDevice() throws -> OpaquePointer {
         guard let dev = device else {
             throw FlutterError(
                 code: "NO_DEVICE",

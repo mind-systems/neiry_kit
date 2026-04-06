@@ -9,6 +9,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private var eventChannels: [String: FlutterEventChannel] = [:]
     private var deviceLocatorBridge: DeviceLocatorBridge?
     private var deviceBridge: DeviceBridge?
+    private var nfbBridge: NfbBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -20,6 +21,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         instance.registerMethodChannels()
         instance.deviceLocatorBridge = DeviceLocatorBridge()
         instance.deviceBridge = DeviceBridge()
+        instance.nfbBridge = NfbBridge()
         instance.registerEventChannels()
     }
 
@@ -51,6 +53,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             handleDeviceLocatorCall(call, result: result)
         } else if channelId == "neiry_kit/device" {
             handleDeviceCall(call, result: result)
+        } else if channelId == "neiry_kit/nfb" {
+            handleNfbCall(call, result: result)
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -121,6 +125,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             bridge.setLogLevel(level: level)
             result(nil)
         case "dispose":
+            nfbBridge?.dispose()
             bridge.dispose()
             deviceBridge?.release()
             result(nil)
@@ -279,6 +284,44 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    // MARK: - nfb dispatch
+
+    private func handleNfbCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let nfbBridge = nfbBridge, let deviceBridge = deviceBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "NfbBridge or DeviceBridge not initialized", details: nil))
+            return
+        }
+        switch call.method {
+        case "create":
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try nfbBridge.create(device: dev)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "createCalibrated":
+            let args = call.arguments as? [String: Any]
+            let calibrationData = args?["calibrationData"] as? [String: Any]
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try nfbBridge.createCalibrated(device: dev, calibrationData: calibrationData)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "dispose":
+            nfbBridge.dispose()
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
     // MARK: - EventChannel registration
 
     private func registerEventChannels() {
@@ -289,6 +332,14 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         if let bridge = deviceBridge {
             for (id, handler) in bridge.allStreamHandlers() {
                 deviceHandlers[id] = handler
+            }
+        }
+
+        // Build lookup for the 2 NFB stream handlers
+        var nfbHandlers: [String: FlutterStreamHandler] = [:]
+        if let bridge = nfbBridge {
+            for (id, handler) in bridge.allStreamHandlers() {
+                nfbHandlers[id] = handler
             }
         }
 
@@ -328,6 +379,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             if id == "neiry_kit/events/deviceList" {
                 channel.setStreamHandler(deviceLocatorBridge)
             } else if let handler = deviceHandlers[id] {
+                channel.setStreamHandler(handler)
+            } else if let handler = nfbHandlers[id] {
                 channel.setStreamHandler(handler)
             } else {
                 channel.setStreamHandler(StubStreamHandler())
