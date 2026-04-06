@@ -10,6 +10,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private var deviceLocatorBridge: DeviceLocatorBridge?
     private var deviceBridge: DeviceBridge?
     private var nfbBridge: NfbBridge?
+    private var nfbCalibratorBridge: NfbCalibratorBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -22,6 +23,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         instance.deviceLocatorBridge = DeviceLocatorBridge()
         instance.deviceBridge = DeviceBridge()
         instance.nfbBridge = NfbBridge()
+        instance.nfbCalibratorBridge = NfbCalibratorBridge()
         instance.registerEventChannels()
     }
 
@@ -55,6 +57,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             handleDeviceCall(call, result: result)
         } else if channelId == "neiry_kit/nfb" {
             handleNfbCall(call, result: result)
+        } else if channelId == "neiry_kit/nfb_calibrator" {
+            handleNfbCalibratorCall(call, result: result)
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -125,6 +129,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             bridge.setLogLevel(level: level)
             result(nil)
         case "dispose":
+            nfbCalibratorBridge?.stopCalibration()
             nfbBridge?.dispose()
             bridge.dispose()
             deviceBridge?.release()
@@ -322,6 +327,69 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    // MARK: - nfb_calibrator dispatch
+
+    private func handleNfbCalibratorCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let nfbCalibratorBridge = nfbCalibratorBridge, let deviceBridge = deviceBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED",
+                                message: "NfbCalibratorBridge or DeviceBridge not initialized",
+                                details: nil))
+            return
+        }
+        switch call.method {
+        case "startCalibration":
+            let args = call.arguments as? [String: Any]
+            let quick = (args?["calibratorData"] as? String) == "quick"
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try nfbCalibratorBridge.startCalibration(device: dev, quick: quick, result: result)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "stopCalibration":
+            nfbCalibratorBridge.stopCalibration()
+            result(nil)
+        case "importCalibration":
+            guard let args = call.arguments as? [String: Any],
+                  let calibratorData = args["calibratorData"] as? [String: Any] else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing 'calibratorData'", details: nil))
+                return
+            }
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try nfbCalibratorBridge.importCalibration(device: dev, calibratorData: calibratorData)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "getCalibration":
+            do {
+                let dev = try deviceBridge.requireDevice()
+                let map = try nfbCalibratorBridge.getCalibration(device: dev)
+                result(map)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "isCalibrated":
+            do {
+                let dev = try deviceBridge.requireDevice()
+                result(nfbCalibratorBridge.isCalibrated(device: dev))
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
     // MARK: - EventChannel registration
 
     private func registerEventChannels() {
@@ -340,6 +408,14 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         if let bridge = nfbBridge {
             for (id, handler) in bridge.allStreamHandlers() {
                 nfbHandlers[id] = handler
+            }
+        }
+
+        // Build lookup for the NFB calibration stream handler
+        var nfbCalibratorHandlers: [String: FlutterStreamHandler] = [:]
+        if let bridge = nfbCalibratorBridge {
+            for (id, handler) in bridge.allStreamHandlers() {
+                nfbCalibratorHandlers[id] = handler
             }
         }
 
@@ -381,6 +457,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             } else if let handler = deviceHandlers[id] {
                 channel.setStreamHandler(handler)
             } else if let handler = nfbHandlers[id] {
+                channel.setStreamHandler(handler)
+            } else if let handler = nfbCalibratorHandlers[id] {
                 channel.setStreamHandler(handler)
             } else {
                 channel.setStreamHandler(StubStreamHandler())
