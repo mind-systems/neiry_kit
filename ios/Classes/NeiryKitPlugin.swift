@@ -11,6 +11,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private var deviceBridge: DeviceBridge?
     private var nfbBridge: NfbBridge?
     private var nfbCalibratorBridge: NfbCalibratorBridge?
+    private var emotionsBridge: EmotionsBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -24,6 +25,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         instance.deviceBridge = DeviceBridge()
         instance.nfbBridge = NfbBridge()
         instance.nfbCalibratorBridge = NfbCalibratorBridge()
+        instance.emotionsBridge = EmotionsBridge()
         instance.registerEventChannels()
     }
 
@@ -59,6 +61,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             handleNfbCall(call, result: result)
         } else if channelId == "neiry_kit/nfb_calibrator" {
             handleNfbCalibratorCall(call, result: result)
+        } else if channelId == "neiry_kit/emotions" {
+            handleEmotionsCall(call, result: result)
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -130,6 +134,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             result(nil)
         case "dispose":
             nfbCalibratorBridge?.stopCalibration()
+            emotionsBridge?.dispose()
             nfbBridge?.dispose()
             bridge.dispose()
             deviceBridge?.release()
@@ -390,6 +395,32 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    // MARK: - emotions dispatch
+
+    private func handleEmotionsCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let emotionsBridge = emotionsBridge, let deviceBridge = deviceBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "EmotionsBridge or DeviceBridge not initialized", details: nil))
+            return
+        }
+        switch call.method {
+        case "create":
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try emotionsBridge.create(device: dev)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "dispose":
+            emotionsBridge.dispose()
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
     // MARK: - EventChannel registration
 
     private func registerEventChannels() {
@@ -416,6 +447,14 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         if let bridge = nfbCalibratorBridge {
             for (id, handler) in bridge.allStreamHandlers() {
                 nfbCalibratorHandlers[id] = handler
+            }
+        }
+
+        // Build lookup for the 2 Emotions stream handlers
+        var emotionsHandlers: [String: FlutterStreamHandler] = [:]
+        if let bridge = emotionsBridge {
+            for (id, handler) in bridge.allStreamHandlers() {
+                emotionsHandlers[id] = handler
             }
         }
 
@@ -459,6 +498,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             } else if let handler = nfbHandlers[id] {
                 channel.setStreamHandler(handler)
             } else if let handler = nfbCalibratorHandlers[id] {
+                channel.setStreamHandler(handler)
+            } else if let handler = emotionsHandlers[id] {
                 channel.setStreamHandler(handler)
             } else {
                 channel.setStreamHandler(StubStreamHandler())
