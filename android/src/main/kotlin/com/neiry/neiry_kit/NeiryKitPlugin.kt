@@ -1,5 +1,7 @@
 package com.neiry.neiry_kit
 
+import android.os.Handler
+import android.os.Looper
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
@@ -10,22 +12,19 @@ import io.flutter.plugin.common.MethodChannel.Result
 /** NeiryKitPlugin */
 class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
 
-    companion object {
-        init {
-            System.loadLibrary("CapsuleClient")  // triggers JNI_OnLoad in SDK
-            System.loadLibrary("neiry_jni")
-        }
-    }
-
     private var methodChannels: MutableMap<String, MethodChannel> = mutableMapOf()
     private var eventChannels: MutableMap<String, EventChannel> = mutableMapOf()
 
-    private external fun nativeGetVersion(): String
+    private var nativeBridge: NativeBridge? = null
+    private var deviceLocatorBridge: DeviceLocatorBridge? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+        nativeBridge = NativeBridge()  // triggers System.loadLibrary via companion init
+        deviceLocatorBridge = DeviceLocatorBridge(nativeBridge!!, Handler(Looper.getMainLooper()))
+
         val messenger = flutterPluginBinding.binaryMessenger
 
-        // Register all 8 MethodChannels
+        // Register all MethodChannels
         val methodChannelIds = listOf(
             "neiry_kit/device_locator",
             "neiry_kit/device",
@@ -44,7 +43,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
             methodChannels[id] = channel
         }
 
-        // Register all 29 EventChannels with StubStreamHandler
+        // Register all EventChannels — deviceList uses the real bridge, others use stub
         val eventChannelIds = listOf(
             "neiry_kit/events/deviceList",
             "neiry_kit/events/eeg",
@@ -78,37 +77,79 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
         )
         for (id in eventChannelIds) {
             val channel = EventChannel(messenger, id)
-            channel.setStreamHandler(StubStreamHandler())
+            val handler: EventChannel.StreamHandler = when (id) {
+                "neiry_kit/events/deviceList" -> deviceLocatorBridge!!
+                else -> StubStreamHandler()
+            }
+            channel.setStreamHandler(handler)
             eventChannels[id] = channel
         }
     }
 
     private fun handleMethodCall(call: MethodCall, result: Result, channelId: String) {
-        if (channelId == "neiry_kit/device_locator") {
-            handleDeviceLocatorCall(call, result)
-        } else if (channelId == "neiry_kit/device") {
-            handleDeviceCall(call, result)
-        } else if (channelId == "neiry_kit/nfb") {
-            handleNfbCall(call, result)
-        } else if (channelId == "neiry_kit/nfb_calibrator") {
-            handleNfbCalibratorCall(call, result)
-        } else if (channelId == "neiry_kit/emotions") {
-            handleEmotionsCall(call, result)
-        } else if (channelId == "neiry_kit/physiological") {
-            handlePhysiologicalCall(call, result)
-        } else if (channelId == "neiry_kit/cardio") {
-            handleCardioCall(call, result)
-        } else if (channelId == "neiry_kit/productivity") {
-            handleProductivityCall(call, result)
-        } else {
-            result.notImplemented()
+        when (channelId) {
+            "neiry_kit/device_locator" -> handleDeviceLocatorCall(call, result)
+            "neiry_kit/device"         -> handleDeviceCall(call, result)
+            "neiry_kit/nfb"            -> handleNfbCall(call, result)
+            "neiry_kit/nfb_calibrator" -> handleNfbCalibratorCall(call, result)
+            "neiry_kit/emotions"       -> handleEmotionsCall(call, result)
+            "neiry_kit/physiological"  -> handlePhysiologicalCall(call, result)
+            "neiry_kit/cardio"         -> handleCardioCall(call, result)
+            "neiry_kit/productivity"   -> handleProductivityCall(call, result)
+            else                       -> result.notImplemented()
         }
     }
 
     private fun handleDeviceLocatorCall(call: MethodCall, result: Result) {
-        when (call.method) {
-            "getVersionString" -> result.success(nativeGetVersion())
-            else -> result.notImplemented()
+        val bridge = deviceLocatorBridge
+            ?: return result.error("NOT_INITIALIZED", "DeviceLocatorBridge not initialized", null)
+        try {
+            when (call.method) {
+                "getVersionString" -> result.success(nativeBridge!!.nativeGetVersion())
+
+                "create" -> {
+                    val logDirectory = (call.arguments as? Map<*, *>)?.get("logDirectory") as? String
+                    bridge.create(logDirectory)
+                    result.success(null)
+                }
+
+                "createDevice" -> {
+                    val serial = (call.arguments as? Map<*, *>)?.get("serial") as? String
+                        ?: return result.error("INVALID_ARGS", "Missing 'serial'", null)
+                    bridge.createDevice(serial)
+                    result.success(null)
+                }
+
+                "setSingleThreaded" -> {
+                    val enabled = (call.arguments as? Map<*, *>)?.get("enabled") as? Boolean
+                        ?: return result.error("INVALID_ARGS", "Missing 'enabled'", null)
+                    bridge.setSingleThreaded(enabled)
+                    result.success(null)
+                }
+
+                "update" -> {
+                    bridge.update()
+                    result.success(null)
+                }
+
+                "setLogLevel" -> {
+                    val level = (call.arguments as? Map<*, *>)?.get("level") as? Int
+                        ?: return result.error("INVALID_ARGS", "Missing 'level'", null)
+                    bridge.setLogLevel(level)
+                    result.success(null)
+                }
+
+                "dispose" -> {
+                    bridge.dispose()
+                    result.success(null)
+                }
+
+                else -> result.notImplemented()
+            }
+        } catch (e: FlutterError) {
+            result.error(e.code, e.message, e.details)
+        } catch (e: Exception) {
+            result.error("UNKNOWN", e.message, null)
         }
     }
 
@@ -145,6 +186,10 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        deviceLocatorBridge?.dispose()
+        deviceLocatorBridge = null
+        nativeBridge = null
+
         for ((_, channel) in methodChannels) {
             channel.setMethodCallHandler(null)
         }
