@@ -6,7 +6,6 @@ import '../device.dart';
 import '../../channel/channel_names.dart';
 import '../../models/physio_baselines.dart';
 import '../../models/physio_states.dart';
-import '../../models/nfb_user_state.dart';
 
 /// Wraps the native `clCPhysiologicalStates` lifecycle and exposes physiological
 /// state classifier outputs as typed streams.
@@ -92,10 +91,10 @@ class PhysioClassifier {
     PhysiologicalStatesBaselines.fromMap,
   );
 
-  late final Stream<NfbUserState> _individualNfbStream = _eventStream(
-    const EventChannel(NeiryEvents.physiologicalIndividualNfb),
-    NfbUserState.fromMap,
-  );
+  late final Stream<void> _individualNfbStream =
+      const EventChannel(NeiryEvents.physiologicalIndividualNfb)
+          .receiveBroadcastStream({NeiryArgs.serial: _serial})
+          .map((_) {});
 
   // ── Guards ─────────────────────────────────────────────────────────────────
 
@@ -147,9 +146,9 @@ class PhysioClassifier {
     return _calibrated;
   }
 
-  /// Emits individual NFB band power values produced by the physiological
-  /// states classifier.
-  Stream<NfbUserState> get individualNfbStream {
+  /// Emits a notification whenever the physiological states classifier refreshes
+  /// its internal NFB state. Carries no data — use it as a trigger only.
+  Stream<void> get individualNfbStream {
     _checkNotDisposed();
     _checkReady();
     return _individualNfbStream;

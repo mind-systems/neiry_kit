@@ -12,6 +12,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private var nfbBridge: NfbBridge?
     private var nfbCalibratorBridge: NfbCalibratorBridge?
     private var emotionsBridge: EmotionsBridge?
+    private var physioBridge: PhysioBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -26,6 +27,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         instance.nfbBridge = NfbBridge()
         instance.nfbCalibratorBridge = NfbCalibratorBridge()
         instance.emotionsBridge = EmotionsBridge()
+        instance.physioBridge = PhysioBridge()
         instance.registerEventChannels()
     }
 
@@ -63,6 +65,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             handleNfbCalibratorCall(call, result: result)
         } else if channelId == "neiry_kit/emotions" {
             handleEmotionsCall(call, result: result)
+        } else if channelId == "neiry_kit/physiological" {
+            handlePhysiologicalCall(call, result: result)
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -135,6 +139,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         case "dispose":
             nfbCalibratorBridge?.stopCalibration()
             emotionsBridge?.dispose()
+            physioBridge?.dispose()
             nfbBridge?.dispose()
             bridge.dispose()
             deviceBridge?.release()
@@ -421,6 +426,55 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    // MARK: - physiological dispatch
+
+    private func handlePhysiologicalCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let physioBridge = physioBridge, let deviceBridge = deviceBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "PhysioBridge or DeviceBridge not initialized", details: nil))
+            return
+        }
+        switch call.method {
+        case "create":
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try physioBridge.create(device: dev)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "startBaselineCalibration":
+            do {
+                try physioBridge.startBaselineCalibration()
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "importBaselines":
+            let args = call.arguments as? [String: Any]
+            guard let baselines = args?["baselines"] as? [String: Any] else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing 'baselines'", details: nil))
+                return
+            }
+            do {
+                try physioBridge.importBaselines(map: baselines)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "dispose":
+            physioBridge.dispose()
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
     // MARK: - EventChannel registration
 
     private func registerEventChannels() {
@@ -455,6 +509,14 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         if let bridge = emotionsBridge {
             for (id, handler) in bridge.allStreamHandlers() {
                 emotionsHandlers[id] = handler
+            }
+        }
+
+        // Build lookup for the 4 Physiological stream handlers
+        var physioHandlers: [String: FlutterStreamHandler] = [:]
+        if let bridge = physioBridge {
+            for (id, handler) in bridge.allStreamHandlers() {
+                physioHandlers[id] = handler
             }
         }
 
@@ -500,6 +562,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             } else if let handler = nfbCalibratorHandlers[id] {
                 channel.setStreamHandler(handler)
             } else if let handler = emotionsHandlers[id] {
+                channel.setStreamHandler(handler)
+            } else if let handler = physioHandlers[id] {
                 channel.setStreamHandler(handler)
             } else {
                 channel.setStreamHandler(StubStreamHandler())
