@@ -7,7 +7,6 @@ import '../../channel/channel_names.dart';
 import '../../models/productivity_metrics.dart';
 import '../../models/productivity_indexes.dart';
 import '../../models/productivity_baselines.dart';
-import '../../models/nfb_user_state.dart';
 import '../../models/individual_nfb_data.dart';
 
 /// Wraps the native `clCProductivity` lifecycle and exposes productivity
@@ -145,10 +144,10 @@ class ProductivityClassifier {
     (map) => map['baselines'] as Uint8List,
   );
 
-  late final Stream<NfbUserState> _individualNfbStream = _eventStream(
-    const EventChannel(NeiryEvents.productivityIndividualNfb),
-    NfbUserState.fromMap,
-  );
+  late final Stream<void> _individualNfbStream =
+      const EventChannel(NeiryEvents.productivityIndividualNfb)
+          .receiveBroadcastStream({NeiryArgs.serial: _serial})
+          .map((_) {});
 
   late final Stream<String> _errorStream = _eventStream(
     const EventChannel(NeiryEvents.productivityError),
@@ -220,9 +219,9 @@ class ProductivityClassifier {
     return _calibrated;
   }
 
-  /// Emits individual NFB band power values produced by the productivity
-  /// classifier's internal NFB classifier.
-  Stream<NfbUserState> get individualNfbStream {
+  /// Emits a notification whenever the productivity classifier refreshes its
+  /// internal NFB state. Carries no data — use it as a trigger only.
+  Stream<void> get individualNfbStream {
     _checkNotDisposed();
     _checkReady();
     return _individualNfbStream;

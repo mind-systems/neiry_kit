@@ -14,6 +14,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private var emotionsBridge: EmotionsBridge?
     private var physioBridge: PhysioBridge?
     private var cardioBridge: CardioBridge?
+    private var productivityBridge: ProductivityBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -30,6 +31,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         instance.emotionsBridge = EmotionsBridge()
         instance.physioBridge = PhysioBridge()
         instance.cardioBridge = CardioBridge()
+        instance.productivityBridge = ProductivityBridge()
         instance.registerEventChannels()
     }
 
@@ -71,6 +73,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             handlePhysiologicalCall(call, result: result)
         } else if channelId == "neiry_kit/cardio" {
             handleCardioCall(call, result: result)
+        } else if channelId == "neiry_kit/productivity" {
+            handleProductivityCall(call, result: result)
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -143,6 +147,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         case "dispose":
             nfbCalibratorBridge?.stopCalibration()
             cardioBridge?.dispose()
+            productivityBridge?.dispose()
             emotionsBridge?.dispose()
             physioBridge?.dispose()
             nfbBridge?.dispose()
@@ -518,6 +523,78 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    // MARK: - productivity dispatch
+
+    private func handleProductivityCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let productivityBridge = productivityBridge, let deviceBridge = deviceBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "ProductivityBridge or DeviceBridge not initialized", details: nil))
+            return
+        }
+        let args = call.arguments as? [String: Any]
+        switch call.method {
+        case "create":
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try productivityBridge.create(device: dev)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "createCalibrated":
+            guard let calibrationData = args?["calibrationData"] as? [String: Any] else {
+                result(FlutterError(code: "INVALID_ARGS", message: "calibrationData is required", details: nil))
+                return
+            }
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try productivityBridge.createCalibrated(device: dev, calibrationData: calibrationData)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "startBaselineCalibration":
+            do {
+                try productivityBridge.startBaselineCalibration()
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "importBaselines":
+            guard let baselines = args?["baselines"] as? FlutterStandardTypedData else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing 'baselines'", details: nil))
+                return
+            }
+            do {
+                try productivityBridge.importBaselines(data: baselines)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "resetAccumulatedFatigue":
+            do {
+                try productivityBridge.resetAccumulatedFatigue()
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "dispose":
+            productivityBridge.dispose()
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
     // MARK: - EventChannel registration
 
     private func registerEventChannels() {
@@ -571,6 +648,14 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             }
         }
 
+        // Build lookup for the 6 Productivity stream handlers
+        var productivityHandlers: [String: FlutterStreamHandler] = [:]
+        if let bridge = productivityBridge {
+            for (id, handler) in bridge.allStreamHandlers() {
+                productivityHandlers[id] = handler
+            }
+        }
+
         let ids: [String] = [
             "neiry_kit/events/deviceList",
             "neiry_kit/events/eeg",
@@ -617,6 +702,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             } else if let handler = physioHandlers[id] {
                 channel.setStreamHandler(handler)
             } else if let handler = cardioHandlers[id] {
+                channel.setStreamHandler(handler)
+            } else if let handler = productivityHandlers[id] {
                 channel.setStreamHandler(handler)
             } else {
                 channel.setStreamHandler(StubStreamHandler())
