@@ -51,6 +51,29 @@ android {
 
     defaultConfig {
         minSdk = 24
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags += ""
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            pickFirsts += setOf(
+                "lib/arm64-v8a/libCapsuleClient.so",
+                "lib/arm64-v8a/libc++_shared.so",
+            )
+        }
     }
 
     testOptions {
