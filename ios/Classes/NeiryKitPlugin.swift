@@ -13,6 +13,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private var nfbCalibratorBridge: NfbCalibratorBridge?
     private var emotionsBridge: EmotionsBridge?
     private var physioBridge: PhysioBridge?
+    private var cardioBridge: CardioBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -28,6 +29,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         instance.nfbCalibratorBridge = NfbCalibratorBridge()
         instance.emotionsBridge = EmotionsBridge()
         instance.physioBridge = PhysioBridge()
+        instance.cardioBridge = CardioBridge()
         instance.registerEventChannels()
     }
 
@@ -67,6 +69,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             handleEmotionsCall(call, result: result)
         } else if channelId == "neiry_kit/physiological" {
             handlePhysiologicalCall(call, result: result)
+        } else if channelId == "neiry_kit/cardio" {
+            handleCardioCall(call, result: result)
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -138,6 +142,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             result(nil)
         case "dispose":
             nfbCalibratorBridge?.stopCalibration()
+            cardioBridge?.dispose()
             emotionsBridge?.dispose()
             physioBridge?.dispose()
             nfbBridge?.dispose()
@@ -475,6 +480,44 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    // MARK: - cardio dispatch
+
+    private func handleCardioCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let cardioBridge = cardioBridge, let deviceBridge = deviceBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "CardioBridge or DeviceBridge not initialized", details: nil))
+            return
+        }
+        switch call.method {
+        case "create":
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try cardioBridge.create(device: dev)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "createCalibrated":
+            let args = call.arguments as? [String: Any]
+            let calibrationData = args?["calibrationData"] as? [String: Any]
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try cardioBridge.createCalibrated(device: dev, calibrationData: calibrationData)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "dispose":
+            cardioBridge.dispose()
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
     // MARK: - EventChannel registration
 
     private func registerEventChannels() {
@@ -517,6 +560,14 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         if let bridge = physioBridge {
             for (id, handler) in bridge.allStreamHandlers() {
                 physioHandlers[id] = handler
+            }
+        }
+
+        // Build lookup for the 3 Cardio stream handlers
+        var cardioHandlers: [String: FlutterStreamHandler] = [:]
+        if let bridge = cardioBridge {
+            for (id, handler) in bridge.allStreamHandlers() {
+                cardioHandlers[id] = handler
             }
         }
 
@@ -564,6 +615,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             } else if let handler = emotionsHandlers[id] {
                 channel.setStreamHandler(handler)
             } else if let handler = physioHandlers[id] {
+                channel.setStreamHandler(handler)
+            } else if let handler = cardioHandlers[id] {
                 channel.setStreamHandler(handler)
             } else {
                 channel.setStreamHandler(StubStreamHandler())
