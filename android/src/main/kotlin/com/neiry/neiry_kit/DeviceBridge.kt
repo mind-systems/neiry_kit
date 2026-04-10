@@ -80,7 +80,7 @@ class DeviceBridge(private val nativeBridge: NativeBridge) {
      * Returns the stored device handle or throws [FlutterError] if no device
      * has been set yet.
      */
-    private fun requireHandle(): Long {
+    fun requireHandle(): Long {
         if (handle == 0L) {
             throw FlutterError("NO_DEVICE", "No device handle — call createDevice first", null)
         }

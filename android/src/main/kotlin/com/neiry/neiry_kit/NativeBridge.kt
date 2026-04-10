@@ -60,6 +60,27 @@ class NativeBridge {
     external fun nativeGetChannelsCountFromHandle(namesHandle: Long): Int
     external fun nativeGetChannelNameByIndexFromHandle(namesHandle: Long, index: Int): String
     external fun nativeGetChannelIndexByNameFromHandle(namesHandle: Long, channelName: String): Int
+
+    // ── NFB classifier ────────────────────────────────────────────────────────
+
+    external fun nativeCreateNfb(deviceHandle: Long): Long
+    external fun nativeCreateNfbCalibrated(
+        deviceHandle: Long,
+        hasCalibrationData: Boolean,
+        ts: Long,
+        failReason: Int,
+        individualFrequency: Float,
+        individualPeakFrequency: Float,
+        individualPeakFrequencyPower: Float,
+        individualPeakFrequencySuppression: Float,
+        individualBandwidth: Float,
+        individualNormalizedPower: Float,
+        lowerFrequency: Float,
+        upperFrequency: Float,
+    ): Long
+    external fun nativeSetNfbStateSink(sink: EventChannel.EventSink?)
+    external fun nativeSetNfbErrorSink(sink: EventChannel.EventSink?)
+    external fun nativeDisposeNfb(nfbHandle: Long)
 }
 
 /**

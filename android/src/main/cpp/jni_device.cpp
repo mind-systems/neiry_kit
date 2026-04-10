@@ -69,22 +69,22 @@ static void unregister_device_slot(int slot) {
 
 // ─── HashMap / boxing JNI caches ─────────────────────────────────────────────
 
-static jclass    s_hmClass       = nullptr;
-static jmethodID s_hmCtor        = nullptr;
-static jmethodID s_hmPut         = nullptr;
-static jclass    s_intClass      = nullptr;
-static jmethodID s_intValueOf    = nullptr;
-static jclass    s_longClass     = nullptr;
-static jmethodID s_longValueOf   = nullptr;
-static jclass    s_floatClass    = nullptr;
-static jmethodID s_floatValueOf  = nullptr;
-static jclass    s_doubleClass   = nullptr;
-static jmethodID s_doubleValueOf = nullptr;
-static jclass    s_boolClass     = nullptr;
-static jmethodID s_boolValueOf   = nullptr;
-static jclass    s_stringClass   = nullptr;
+jclass    s_hmClass       = nullptr;
+jmethodID s_hmCtor        = nullptr;
+jmethodID s_hmPut         = nullptr;
+jclass    s_intClass      = nullptr;
+jmethodID s_intValueOf    = nullptr;
+jclass    s_longClass     = nullptr;
+jmethodID s_longValueOf   = nullptr;
+jclass    s_floatClass    = nullptr;
+jmethodID s_floatValueOf  = nullptr;
+jclass    s_doubleClass   = nullptr;
+jmethodID s_doubleValueOf = nullptr;
+jclass    s_boolClass     = nullptr;
+jmethodID s_boolValueOf   = nullptr;
+jclass    s_stringClass   = nullptr;
 
-static void init_map_cache(JNIEnv* env) {
+void init_map_cache(JNIEnv* env) {
     if (s_hmClass) return;
     jclass local;
 
@@ -118,11 +118,11 @@ static void init_map_cache(JNIEnv* env) {
     s_stringClass = (jclass)env->NewGlobalRef(local); env->DeleteLocalRef(local);
 }
 
-static jobject make_map(JNIEnv* env) {
+jobject make_map(JNIEnv* env) {
     return env->NewObject(s_hmClass, s_hmCtor);
 }
 
-static void map_put_int(JNIEnv* env, jobject map, const char* key, jint val) {
+void map_put_int(JNIEnv* env, jobject map, const char* key, jint val) {
     jstring jKey  = env->NewStringUTF(key);
     jobject boxed = env->CallStaticObjectMethod(s_intClass, s_intValueOf, val);
     env->CallObjectMethod(map, s_hmPut, jKey, boxed);
@@ -130,7 +130,7 @@ static void map_put_int(JNIEnv* env, jobject map, const char* key, jint val) {
     env->DeleteLocalRef(boxed);
 }
 
-static void map_put_long(JNIEnv* env, jobject map, const char* key, jlong val) {
+void map_put_long(JNIEnv* env, jobject map, const char* key, jlong val) {
     jstring jKey  = env->NewStringUTF(key);
     jobject boxed = env->CallStaticObjectMethod(s_longClass, s_longValueOf, val);
     env->CallObjectMethod(map, s_hmPut, jKey, boxed);
@@ -138,7 +138,7 @@ static void map_put_long(JNIEnv* env, jobject map, const char* key, jlong val) {
     env->DeleteLocalRef(boxed);
 }
 
-static void map_put_float(JNIEnv* env, jobject map, const char* key, jfloat val) {
+void map_put_float(JNIEnv* env, jobject map, const char* key, jfloat val) {
     jstring jKey  = env->NewStringUTF(key);
     jobject boxed = env->CallStaticObjectMethod(s_floatClass, s_floatValueOf, val);
     env->CallObjectMethod(map, s_hmPut, jKey, boxed);
@@ -146,7 +146,7 @@ static void map_put_float(JNIEnv* env, jobject map, const char* key, jfloat val)
     env->DeleteLocalRef(boxed);
 }
 
-static void map_put_double(JNIEnv* env, jobject map, const char* key, jdouble val) {
+void map_put_double(JNIEnv* env, jobject map, const char* key, jdouble val) {
     jstring jKey  = env->NewStringUTF(key);
     jobject boxed = env->CallStaticObjectMethod(s_doubleClass, s_doubleValueOf, val);
     env->CallObjectMethod(map, s_hmPut, jKey, boxed);
@@ -154,7 +154,7 @@ static void map_put_double(JNIEnv* env, jobject map, const char* key, jdouble va
     env->DeleteLocalRef(boxed);
 }
 
-static void map_put_string(JNIEnv* env, jobject map, const char* key, const char* val) {
+void map_put_string(JNIEnv* env, jobject map, const char* key, const char* val) {
     jstring jKey = env->NewStringUTF(key);
     jstring jVal = env->NewStringUTF(val ? val : "");
     env->CallObjectMethod(map, s_hmPut, jKey, jVal);
@@ -162,7 +162,7 @@ static void map_put_string(JNIEnv* env, jobject map, const char* key, const char
     env->DeleteLocalRef(jVal);
 }
 
-static void map_put_bool(JNIEnv* env, jobject map, const char* key, jboolean val) {
+void map_put_bool(JNIEnv* env, jobject map, const char* key, jboolean val) {
     jstring jKey  = env->NewStringUTF(key);
     jobject boxed = env->CallStaticObjectMethod(s_boolClass, s_boolValueOf, val);
     env->CallObjectMethod(map, s_hmPut, jKey, boxed);
@@ -170,7 +170,7 @@ static void map_put_bool(JNIEnv* env, jobject map, const char* key, jboolean val
     env->DeleteLocalRef(boxed);
 }
 
-static void map_put_object(JNIEnv* env, jobject map, const char* key, jobject val) {
+void map_put_object(JNIEnv* env, jobject map, const char* key, jobject val) {
     jstring jKey = env->NewStringUTF(key);
     env->CallObjectMethod(map, s_hmPut, jKey, val);
     env->DeleteLocalRef(jKey);

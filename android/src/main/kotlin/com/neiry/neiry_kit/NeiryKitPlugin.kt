@@ -18,11 +18,13 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     private var nativeBridge: NativeBridge? = null
     private var deviceLocatorBridge: DeviceLocatorBridge? = null
     private var deviceBridge: DeviceBridge? = null
+    private var nfbBridge: NfbBridge? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         nativeBridge = NativeBridge()  // triggers System.loadLibrary via companion init
         deviceLocatorBridge = DeviceLocatorBridge(nativeBridge!!, Handler(Looper.getMainLooper()))
         deviceBridge = DeviceBridge(nativeBridge!!)
+        nfbBridge = NfbBridge(nativeBridge!!)
 
         val messenger = flutterPluginBinding.binaryMessenger
 
@@ -49,6 +51,9 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
         val streamHandlerMap: Map<String, EventChannel.StreamHandler> = buildMap {
             put("neiry_kit/events/deviceList", deviceLocatorBridge!!)
             for ((id, handler) in deviceBridge!!.allStreamHandlers()) {
+                put(id, handler)
+            }
+            for ((id, handler) in nfbBridge!!.allStreamHandlers()) {
                 put(id, handler)
             }
         }
@@ -214,7 +219,35 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun handleNfbCall(call: MethodCall, result: Result) {
-        result.notImplemented()
+        val bridge = nfbBridge
+            ?: return result.error("NOT_INITIALIZED", "NfbBridge not initialized", null)
+        val devBridge = deviceBridge
+            ?: return result.error("NOT_INITIALIZED", "DeviceBridge not initialized", null)
+        try {
+            when (call.method) {
+                "create" -> {
+                    val deviceHandle = devBridge.requireHandle()
+                    bridge.create(deviceHandle)
+                    result.success(null)
+                }
+                "createCalibrated" -> {
+                    val deviceHandle = devBridge.requireHandle()
+                    @Suppress("UNCHECKED_CAST")
+                    val calibrationData = (call.arguments as? Map<*, *>)?.get("calibrationData") as? Map<String, Any>
+                    bridge.createCalibrated(deviceHandle, calibrationData)
+                    result.success(null)
+                }
+                "dispose" -> {
+                    bridge.dispose()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        } catch (e: FlutterError) {
+            result.error(e.code, e.message, e.details)
+        } catch (e: Exception) {
+            result.error("UNKNOWN", e.message, null)
+        }
     }
 
     private fun handleNfbCalibratorCall(call: MethodCall, result: Result) {
@@ -242,6 +275,8 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        nfbBridge?.dispose()
+        nfbBridge = null
         deviceLocatorBridge?.dispose()
         deviceBridge?.release()
         deviceLocatorBridge = null

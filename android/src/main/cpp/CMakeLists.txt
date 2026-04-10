@@ -8,6 +8,7 @@ add_library(neiry_jni SHARED
     jni_bridge.cpp
     jni_device_locator.cpp
     jni_device.cpp
+    jni_nfb.cpp
 )
 
 target_include_directories(neiry_jni PRIVATE ${CAPSULE_HEADERS})
