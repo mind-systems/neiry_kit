@@ -81,6 +81,22 @@ class NativeBridge {
     external fun nativeSetNfbStateSink(sink: EventChannel.EventSink?)
     external fun nativeSetNfbErrorSink(sink: EventChannel.EventSink?)
     external fun nativeDisposeNfb(nfbHandle: Long)
+
+    // ── NFB calibrator ────────────────────────────────────────────────────────
+
+    external fun nativeStartCalibration(deviceHandle: Long, quick: Boolean)
+    external fun nativeStopCalibration()
+    external fun nativeImportCalibration(
+        deviceHandle: Long,
+        ts: Long, failReason: Int,
+        individualFrequency: Float, individualPeakFrequency: Float,
+        individualPeakFrequencyPower: Float, individualPeakFrequencySuppression: Float,
+        individualBandwidth: Float, individualNormalizedPower: Float,
+        lowerFrequency: Float, upperFrequency: Float,
+    )
+    external fun nativeGetCalibration(deviceHandle: Long): Map<String, Any>?
+    external fun nativeIsCalibrated(deviceHandle: Long): Boolean
+    external fun nativeSetNfbCalibrationSink(sink: EventChannel.EventSink?)
 }
 
 /**

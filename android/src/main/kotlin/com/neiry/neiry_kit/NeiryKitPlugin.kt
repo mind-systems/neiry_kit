@@ -19,12 +19,14 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     private var deviceLocatorBridge: DeviceLocatorBridge? = null
     private var deviceBridge: DeviceBridge? = null
     private var nfbBridge: NfbBridge? = null
+    private var nfbCalibratorBridge: NfbCalibratorBridge? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         nativeBridge = NativeBridge()  // triggers System.loadLibrary via companion init
         deviceLocatorBridge = DeviceLocatorBridge(nativeBridge!!, Handler(Looper.getMainLooper()))
         deviceBridge = DeviceBridge(nativeBridge!!)
         nfbBridge = NfbBridge(nativeBridge!!)
+        nfbCalibratorBridge = NfbCalibratorBridge(nativeBridge!!)
 
         val messenger = flutterPluginBinding.binaryMessenger
 
@@ -54,6 +56,9 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
                 put(id, handler)
             }
             for ((id, handler) in nfbBridge!!.allStreamHandlers()) {
+                put(id, handler)
+            }
+            for ((id, handler) in nfbCalibratorBridge!!.allStreamHandlers()) {
                 put(id, handler)
             }
         }
@@ -251,7 +256,48 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun handleNfbCalibratorCall(call: MethodCall, result: Result) {
-        result.notImplemented()
+        val bridge = nfbCalibratorBridge
+            ?: return result.error("NOT_INITIALIZED", "NfbCalibratorBridge not initialized", null)
+        val devBridge = deviceBridge
+            ?: return result.error("NOT_INITIALIZED", "DeviceBridge not initialized", null)
+        try {
+            when (call.method) {
+                "startCalibration" -> {
+                    val deviceHandle = devBridge.requireHandle()
+                    val calibratorData = (call.arguments as? Map<*, *>)?.get("calibratorData")
+                    val quick = calibratorData == "quick"
+                    bridge.startCalibration(deviceHandle, quick)
+                    result.success(null)
+                }
+                "stopCalibration" -> {
+                    bridge.stopCalibration()
+                    result.success(null)
+                }
+                "importCalibration" -> {
+                    val deviceHandle = devBridge.requireHandle()
+                    @Suppress("UNCHECKED_CAST")
+                    val data = (call.arguments as? Map<*, *>)?.get("calibratorData") as? Map<String, Any>
+                        ?: return result.error("INVALID_ARGS", "Missing 'calibratorData'", null)
+                    bridge.importCalibration(deviceHandle, data)
+                    result.success(null)
+                }
+                "getCalibration" -> {
+                    val deviceHandle = devBridge.requireHandle()
+                    val map = bridge.getCalibration(deviceHandle)
+                    result.success(map)
+                }
+                "isCalibrated" -> {
+                    val deviceHandle = devBridge.requireHandle()
+                    val calibrated = bridge.isCalibrated(deviceHandle)
+                    result.success(calibrated)
+                }
+                else -> result.notImplemented()
+            }
+        } catch (e: FlutterError) {
+            result.error(e.code, e.message, e.details)
+        } catch (e: Exception) {
+            result.error("UNKNOWN", e.message, null)
+        }
     }
 
     private fun handleEmotionsCall(call: MethodCall, result: Result) {
@@ -275,6 +321,8 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        nfbCalibratorBridge?.dispose()
+        nfbCalibratorBridge = null
         nfbBridge?.dispose()
         nfbBridge = null
         deviceLocatorBridge?.dispose()

@@ -15,7 +15,7 @@ static pthread_mutex_t g_callback_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 jclass    g_dispatcher_class = nullptr;  // global ref
 jmethodID g_postSuccess      = nullptr;
-static jmethodID g_postError        = nullptr;
+jmethodID g_postError        = nullptr;
 static jmethodID g_postEndOfStream  = nullptr;
 
 // ─── Error helper ─────────────────────────────────────────────────────────────
