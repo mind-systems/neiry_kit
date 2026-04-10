@@ -5,16 +5,16 @@
 
 // ─── Global state ─────────────────────────────────────────────────────────────
 
-static JavaVM*   g_jvm              = nullptr;
-static jobject   g_handler          = nullptr;  // android.os.Handler (main looper), global ref
+JavaVM*   g_jvm              = nullptr;
+jobject   g_handler          = nullptr;  // android.os.Handler (main looper), global ref
 static jobject   g_deviceListSink   = nullptr;  // EventChannel.EventSink, global ref
 
 static pthread_mutex_t g_callback_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // ─── Cached JNI IDs for SinkDispatcher ───────────────────────────────────────
 
-static jclass    g_dispatcher_class = nullptr;  // global ref
-static jmethodID g_postSuccess      = nullptr;
+jclass    g_dispatcher_class = nullptr;  // global ref
+jmethodID g_postSuccess      = nullptr;
 static jmethodID g_postError        = nullptr;
 static jmethodID g_postEndOfStream  = nullptr;
 

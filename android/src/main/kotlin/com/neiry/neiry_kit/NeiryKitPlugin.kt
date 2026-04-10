@@ -45,7 +45,15 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
             methodChannels[id] = channel
         }
 
-        // Register all EventChannels — deviceList uses the real bridge, others use stub
+        // Build a map of all known real stream handlers
+        val streamHandlerMap: Map<String, EventChannel.StreamHandler> = buildMap {
+            put("neiry_kit/events/deviceList", deviceLocatorBridge!!)
+            for ((id, handler) in deviceBridge!!.allStreamHandlers()) {
+                put(id, handler)
+            }
+        }
+
+        // Register all EventChannels — use real handlers where available, stub elsewhere
         val eventChannelIds = listOf(
             "neiry_kit/events/deviceList",
             "neiry_kit/events/eeg",
@@ -79,10 +87,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
         )
         for (id in eventChannelIds) {
             val channel = EventChannel(messenger, id)
-            val handler: EventChannel.StreamHandler = when (id) {
-                "neiry_kit/events/deviceList" -> deviceLocatorBridge!!
-                else -> StubStreamHandler()
-            }
+            val handler: EventChannel.StreamHandler = streamHandlerMap[id] ?: StubStreamHandler()
             channel.setStreamHandler(handler)
             eventChannels[id] = channel
         }

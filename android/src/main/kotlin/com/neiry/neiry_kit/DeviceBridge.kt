@@ -1,5 +1,7 @@
 package com.neiry.neiry_kit
 
+import io.flutter.plugin.common.EventChannel
+
 /**
  * Kotlin bridge for `clCDevice_*`. Owns the native device handle and exposes
  * lifecycle commands and getters to the plugin dispatch layer.
@@ -9,6 +11,17 @@ package com.neiry.neiry_kit
  * release function for `clCDevice_ChannelNames`).
  */
 class DeviceBridge(private val nativeBridge: NativeBridge) {
+
+    companion object {
+        const val STREAM_EEG               = 0
+        const val STREAM_PSD               = 1
+        const val STREAM_ARTIFACTS         = 2
+        const val STREAM_RESISTANCE        = 3
+        const val STREAM_BATTERY           = 4
+        const val STREAM_ERROR             = 5
+        const val STREAM_CONNECTION_STATUS = 6
+        const val STREAM_MODE              = 7
+    }
 
     /** Native device handle obtained via `clCDeviceLocator_CreateDevice`. */
     private var handle: Long = 0L
@@ -22,6 +35,44 @@ class DeviceBridge(private val nativeBridge: NativeBridge) {
      * Reset whenever the active device changes.
      */
     private var channelNamesHandle: Long = 0L
+
+    // ── Stream handlers ───────────────────────────────────────────────────────
+
+    /**
+     * A [EventChannel.StreamHandler] that forwards onListen/onCancel to
+     * [nativeSetDeviceStreamSink], wiring the native callback to the Dart sink.
+     */
+    inner class DeviceStreamHandler(
+        private val streamType: Int
+    ) : EventChannel.StreamHandler {
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            nativeBridge.nativeSetDeviceStreamSink(streamType, events)
+        }
+        override fun onCancel(arguments: Any?) {
+            nativeBridge.nativeSetDeviceStreamSink(streamType, null)
+        }
+    }
+
+    val eegHandler              = DeviceStreamHandler(STREAM_EEG)
+    val psdHandler              = DeviceStreamHandler(STREAM_PSD)
+    val artifactsHandler        = DeviceStreamHandler(STREAM_ARTIFACTS)
+    val resistanceHandler       = DeviceStreamHandler(STREAM_RESISTANCE)
+    val batteryHandler          = DeviceStreamHandler(STREAM_BATTERY)
+    val errorHandler            = DeviceStreamHandler(STREAM_ERROR)
+    val connectionStatusHandler = DeviceStreamHandler(STREAM_CONNECTION_STATUS)
+    val modeHandler             = DeviceStreamHandler(STREAM_MODE)
+
+    /** Returns all (channelId, handler) pairs for EventChannel registration in the plugin. */
+    fun allStreamHandlers(): List<Pair<String, EventChannel.StreamHandler>> = listOf(
+        "neiry_kit/events/eeg"              to eegHandler,
+        "neiry_kit/events/psd"              to psdHandler,
+        "neiry_kit/events/eegArtifacts"     to artifactsHandler,
+        "neiry_kit/events/resistance"       to resistanceHandler,
+        "neiry_kit/events/battery"          to batteryHandler,
+        "neiry_kit/events/error"            to errorHandler,
+        "neiry_kit/events/connectionStatus" to connectionStatusHandler,
+        "neiry_kit/events/modeSwitched"     to modeHandler,
+    )
 
     // ── Handle management ─────────────────────────────────────────────────────
 
@@ -38,17 +89,21 @@ class DeviceBridge(private val nativeBridge: NativeBridge) {
 
     /**
      * Called by [NeiryKitPlugin] after `DeviceLocatorBridge.createDevice()` to
-     * hand off the native handle. Releases any existing handle that differs from
-     * the incoming one to prevent native handle leaks on repeated createDevice calls.
+     * hand off the native handle. Unregisters callbacks on the old handle before
+     * releasing it (prevents use-after-free), then registers on the new handle.
+     * Mirrors iOS `DeviceBridge.setDevice()` line 113 which calls
+     * `unregisterCallbacks()` before `clCDevice_Release(old)`.
      */
     fun setDevice(serial: String, handle: Long) {
         val old = this.handle
         if (old != 0L && old != handle) {
+            nativeBridge.nativeUnregisterDeviceCallbacks(old)
             nativeBridge.nativeReleaseDevice(old)
         }
         this.handle = handle
         this.serial = serial
         channelNamesHandle = 0L
+        nativeBridge.nativeRegisterDeviceCallbacks(handle)
     }
 
     /**
@@ -107,11 +162,13 @@ class DeviceBridge(private val nativeBridge: NativeBridge) {
     }
 
     /**
-     * Releases the native device handle and clears all cached state.
-     * Called by [NeiryKitPlugin] during engine detach — NOT on disconnect.
+     * Unregisters callbacks then releases the native device handle and clears
+     * all cached state. Callbacks must be torn down before the device handle is
+     * released. Called by [NeiryKitPlugin] during engine detach — NOT on disconnect.
      */
     fun release() {
         if (handle != 0L) {
+            nativeBridge.nativeUnregisterDeviceCallbacks(handle)
             nativeBridge.nativeReleaseDevice(handle)
         }
         handle = 0L

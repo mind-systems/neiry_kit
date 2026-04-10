@@ -36,6 +36,10 @@ class NativeBridge {
 
     // ── Device ───────────────────────────────────────────────────────────────
 
+    external fun nativeRegisterDeviceCallbacks(handle: Long)
+    external fun nativeUnregisterDeviceCallbacks(handle: Long)
+    external fun nativeSetDeviceStreamSink(streamType: Int, sink: EventChannel.EventSink?)
+
     external fun nativeConnectDevice(handle: Long, bipolarChannels: Boolean)
     external fun nativeDisconnectDevice(handle: Long)
     external fun nativeStartDevice(handle: Long)
