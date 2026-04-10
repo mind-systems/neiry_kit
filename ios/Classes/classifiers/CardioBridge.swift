@@ -109,7 +109,8 @@ class CardioBridge: NSObject {
 
         var e2 = clCError()
         clCCardio_SetOnPPGDataEvent(cardio, { _, ppgData in
-            guard let bridge = CardioBridge.activeBridge else { return }
+            guard let bridge = CardioBridge.activeBridge,
+                  let ppgData = ppgData else { return }
             let count = clCPPGTimedData_GetCount(ppgData)
             var values: [Float] = []
             var timestamps: [UInt64] = []
