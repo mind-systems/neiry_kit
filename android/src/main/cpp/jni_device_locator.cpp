@@ -20,7 +20,7 @@ static jmethodID g_postEndOfStream  = nullptr;
 
 // ─── Error helper ─────────────────────────────────────────────────────────────
 
-static void throw_sdk_error(JNIEnv* env, const clCError* error) {
+void throw_sdk_error(JNIEnv* env, const clCError* error) {
     char encoded[512];
     snprintf(encoded, sizeof(encoded), "%d|%s", (int)error->code, error->message);
     jclass cls = env->FindClass("java/lang/RuntimeException");

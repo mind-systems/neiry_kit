@@ -7,6 +7,7 @@ set(CAPSULE_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/../../../../official/iOS/Capsul
 add_library(neiry_jni SHARED
     jni_bridge.cpp
     jni_device_locator.cpp
+    jni_device.cpp
 )
 
 target_include_directories(neiry_jni PRIVATE ${CAPSULE_HEADERS})

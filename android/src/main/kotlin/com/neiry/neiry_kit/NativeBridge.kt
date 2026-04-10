@@ -33,6 +33,29 @@ class NativeBridge {
     external fun nativeSetSingleThreaded(enabled: Boolean)
     external fun nativeUpdate(handle: Long)
     external fun nativeSetLogLevel(level: Int)
+
+    // ── Device ───────────────────────────────────────────────────────────────
+
+    external fun nativeConnectDevice(handle: Long, bipolarChannels: Boolean)
+    external fun nativeDisconnectDevice(handle: Long)
+    external fun nativeStartDevice(handle: Long)
+    external fun nativeStopDevice(handle: Long)
+    external fun nativeReleaseDevice(handle: Long)
+    external fun nativeGetBatteryCharge(handle: Long): Int
+    external fun nativeGetMode(handle: Long): Int
+    external fun nativeGetEEGSampleRate(handle: Long): Float
+    external fun nativeGetPPGSampleRate(handle: Long): Float
+    external fun nativeGetMEMSSampleRate(handle: Long): Float
+    external fun nativeGetPPGIrAmplitude(handle: Long): Int
+    external fun nativeGetPPGRedAmplitude(handle: Long): Int
+    external fun nativeGetChannelNames(handle: Long): List<String>
+    external fun nativeGetChannelsCount(handle: Long): Int
+    external fun nativeGetChannelIndexByName(handle: Long, channelName: String): Int
+    external fun nativeGetChannelNameByIndex(handle: Long, index: Int): String
+    external fun nativeGetRawChannelNamesHandle(handle: Long): Long
+    external fun nativeGetChannelsCountFromHandle(namesHandle: Long): Int
+    external fun nativeGetChannelNameByIndexFromHandle(namesHandle: Long, index: Int): String
+    external fun nativeGetChannelIndexByNameFromHandle(namesHandle: Long, channelName: String): Int
 }
 
 /**

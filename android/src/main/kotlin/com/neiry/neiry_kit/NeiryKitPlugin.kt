@@ -17,10 +17,12 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
 
     private var nativeBridge: NativeBridge? = null
     private var deviceLocatorBridge: DeviceLocatorBridge? = null
+    private var deviceBridge: DeviceBridge? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         nativeBridge = NativeBridge()  // triggers System.loadLibrary via companion init
         deviceLocatorBridge = DeviceLocatorBridge(nativeBridge!!, Handler(Looper.getMainLooper()))
+        deviceBridge = DeviceBridge(nativeBridge!!)
 
         val messenger = flutterPluginBinding.binaryMessenger
 
@@ -117,6 +119,11 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
                     val serial = (call.arguments as? Map<*, *>)?.get("serial") as? String
                         ?: return result.error("INVALID_ARGS", "Missing 'serial'", null)
                     bridge.createDevice(serial)
+                    val deviceHandle = DeviceLocatorBridge.devices[serial]
+                    if (deviceHandle != null) {
+                        deviceBridge?.setDevice(serial, deviceHandle)
+                        DeviceLocatorBridge.devices.remove(serial)
+                    }
                     result.success(null)
                 }
 
@@ -154,7 +161,51 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun handleDeviceCall(call: MethodCall, result: Result) {
-        result.notImplemented()
+        val bridge = deviceBridge
+            ?: return result.error("NOT_INITIALIZED", "DeviceBridge not initialized", null)
+        try {
+            when (call.method) {
+                "connect" -> {
+                    val bipolarChannels = (call.arguments as? Map<*, *>)?.get("bipolarChannels") as? Boolean ?: false
+                    bridge.connect(bipolarChannels)
+                    result.success(null)
+                }
+                "disconnect" -> {
+                    bridge.disconnect()
+                    result.success(null)
+                }
+                "start" -> {
+                    bridge.start()
+                    result.success(null)
+                }
+                "stop" -> result.success(bridge.stop())
+                "getInfo" -> result.notImplemented()
+                "getBatteryCharge" -> result.success(bridge.getBatteryCharge())
+                "getMode" -> result.success(bridge.getMode())
+                "getEEGSampleRate" -> result.success(bridge.getEEGSampleRate())
+                "getPPGSampleRate" -> result.success(bridge.getPPGSampleRate())
+                "getMEMSSampleRate" -> result.success(bridge.getMEMSSampleRate())
+                "getPPGIrAmplitude" -> result.success(bridge.getPPGIrAmplitude())
+                "getPPGRedAmplitude" -> result.success(bridge.getPPGRedAmplitude())
+                "getChannelNames" -> result.success(bridge.getChannelNames())
+                "getChannelsCount" -> result.success(bridge.getChannelsCount())
+                "getChannelIndexByName" -> {
+                    val channelName = (call.arguments as? Map<*, *>)?.get("channelName") as? String
+                        ?: return result.error("INVALID_ARGS", "Missing 'channelName'", null)
+                    result.success(bridge.getChannelIndexByName(channelName))
+                }
+                "getChannelNameByIndex" -> {
+                    val index = (call.arguments as? Map<*, *>)?.get("index") as? Int
+                        ?: return result.error("INVALID_ARGS", "Missing 'index'", null)
+                    result.success(bridge.getChannelNameByIndex(index))
+                }
+                else -> result.notImplemented()
+            }
+        } catch (e: FlutterError) {
+            result.error(e.code, e.message, e.details)
+        } catch (e: Exception) {
+            result.error("UNKNOWN", e.message, null)
+        }
     }
 
     private fun handleNfbCall(call: MethodCall, result: Result) {
@@ -187,7 +238,9 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         deviceLocatorBridge?.dispose()
+        deviceBridge?.release()
         deviceLocatorBridge = null
+        deviceBridge = null
         nativeBridge = null
 
         for ((_, channel) in methodChannels) {
