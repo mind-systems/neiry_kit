@@ -56,7 +56,9 @@ class DeviceLocatorBridge(
 
     /** Pumps SDK callbacks when in single-threaded mode. */
     fun update() {
-        if (handle == 0L) return
+        if (handle == 0L) {
+            throw FlutterError("NO_LOCATOR", "DeviceLocator not created", null)
+        }
         nativeBridge.nativeUpdate(handle)
     }
 

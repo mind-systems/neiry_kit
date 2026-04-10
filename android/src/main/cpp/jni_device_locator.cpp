@@ -109,11 +109,11 @@ static void on_device_list_callback(
         return;
     }
 
-    // Copy refs under mutex to avoid races with nativeDestroyLocator /
-    // nativeSetDeviceListSink called on the Flutter thread
+    // Promote globals to local refs under the mutex so we hold an independent
+    // ref count that survives a concurrent DeleteGlobalRef on the Flutter thread.
     pthread_mutex_lock(&g_callback_mutex);
-    jobject sink_ref    = g_deviceListSink;
-    jobject handler_ref = g_handler;
+    jobject sink_ref    = g_deviceListSink ? env->NewLocalRef(g_deviceListSink) : nullptr;
+    jobject handler_ref = g_handler        ? env->NewLocalRef(g_handler)        : nullptr;
     pthread_mutex_unlock(&g_callback_mutex);
 
     if (sink_ref) {
@@ -138,6 +138,9 @@ static void on_device_list_callback(
             env->DeleteLocalRef(deviceArray);
         }
     }
+
+    if (sink_ref)    env->DeleteLocalRef(sink_ref);
+    if (handler_ref) env->DeleteLocalRef(handler_ref);
 
     if (attached) g_jvm->DetachCurrentThread();
 }
