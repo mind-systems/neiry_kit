@@ -97,6 +97,13 @@ class NativeBridge {
     external fun nativeGetCalibration(deviceHandle: Long): Map<String, Any>?
     external fun nativeIsCalibrated(deviceHandle: Long): Boolean
     external fun nativeSetNfbCalibrationSink(sink: EventChannel.EventSink?)
+
+    // ── Emotions classifier ───────────────────────────────────────────────────
+
+    external fun nativeCreateEmotions(deviceHandle: Long): Long
+    external fun nativeSetEmotionsStateSink(sink: EventChannel.EventSink?)
+    external fun nativeSetEmotionsErrorSink(sink: EventChannel.EventSink?)
+    external fun nativeDisposeEmotions(emotionsHandle: Long)
 }
 
 /**

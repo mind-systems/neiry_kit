@@ -20,6 +20,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     private var deviceBridge: DeviceBridge? = null
     private var nfbBridge: NfbBridge? = null
     private var nfbCalibratorBridge: NfbCalibratorBridge? = null
+    private var emotionsBridge: EmotionsBridge? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         nativeBridge = NativeBridge()  // triggers System.loadLibrary via companion init
@@ -27,6 +28,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
         deviceBridge = DeviceBridge(nativeBridge!!)
         nfbBridge = NfbBridge(nativeBridge!!)
         nfbCalibratorBridge = NfbCalibratorBridge(nativeBridge!!)
+        emotionsBridge = EmotionsBridge(nativeBridge!!)
 
         val messenger = flutterPluginBinding.binaryMessenger
 
@@ -59,6 +61,9 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
                 put(id, handler)
             }
             for ((id, handler) in nfbCalibratorBridge!!.allStreamHandlers()) {
+                put(id, handler)
+            }
+            for ((id, handler) in emotionsBridge!!.allStreamHandlers()) {
                 put(id, handler)
             }
         }
@@ -301,7 +306,28 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun handleEmotionsCall(call: MethodCall, result: Result) {
-        result.notImplemented()
+        val bridge = emotionsBridge
+            ?: return result.error("NOT_INITIALIZED", "EmotionsBridge not initialized", null)
+        val devBridge = deviceBridge
+            ?: return result.error("NOT_INITIALIZED", "DeviceBridge not initialized", null)
+        try {
+            when (call.method) {
+                "create" -> {
+                    val deviceHandle = devBridge.requireHandle()
+                    bridge.create(deviceHandle)
+                    result.success(null)
+                }
+                "dispose" -> {
+                    bridge.dispose()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        } catch (e: FlutterError) {
+            result.error(e.code, e.message, e.details)
+        } catch (e: Exception) {
+            result.error("UNKNOWN", e.message, null)
+        }
     }
 
     private fun handlePhysiologicalCall(call: MethodCall, result: Result) {
@@ -321,6 +347,8 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        emotionsBridge?.dispose()
+        emotionsBridge = null
         nfbCalibratorBridge?.dispose()
         nfbCalibratorBridge = null
         nfbBridge?.dispose()

@@ -10,6 +10,7 @@ add_library(neiry_jni SHARED
     jni_device.cpp
     jni_nfb.cpp
     jni_nfb_calibrator.cpp
+    jni_emotions.cpp
 )
 
 target_include_directories(neiry_jni PRIVATE ${CAPSULE_HEADERS})
