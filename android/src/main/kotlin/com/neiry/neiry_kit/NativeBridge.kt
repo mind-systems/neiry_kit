@@ -104,6 +104,17 @@ class NativeBridge {
     external fun nativeSetEmotionsStateSink(sink: EventChannel.EventSink?)
     external fun nativeSetEmotionsErrorSink(sink: EventChannel.EventSink?)
     external fun nativeDisposeEmotions(emotionsHandle: Long)
+
+    // ── PhysiologicalStates classifier ───────────────────────────────────────
+
+    external fun nativeCreatePhysio(deviceHandle: Long): Long
+    external fun nativeSetPhysioStateSink(sink: EventChannel.EventSink?)
+    external fun nativeSetPhysioCalibrationProgressSink(sink: EventChannel.EventSink?)
+    external fun nativeSetPhysioCalibratedSink(sink: EventChannel.EventSink?)
+    external fun nativeSetPhysioIndividualNfbSink(sink: EventChannel.EventSink?)
+    external fun nativeStartBaselineCalibration(physioHandle: Long)
+    external fun nativeImportBaselines(physioHandle: Long, ts: Long, alpha: Float, beta: Float, alphaGravity: Float, betaGravity: Float, concentration: Float)
+    external fun nativeDisposePhysio(physioHandle: Long)
 }
 
 /**
