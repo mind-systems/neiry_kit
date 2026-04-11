@@ -115,6 +115,28 @@ class NativeBridge {
     external fun nativeStartBaselineCalibration(physioHandle: Long)
     external fun nativeImportBaselines(physioHandle: Long, ts: Long, alpha: Float, beta: Float, alphaGravity: Float, betaGravity: Float, concentration: Float)
     external fun nativeDisposePhysio(physioHandle: Long)
+
+    // ── Cardio classifier ─────────────────────────────────────────────────────
+
+    external fun nativeCreateCardio(deviceHandle: Long): Long
+    external fun nativeCreateCardioCalibrated(
+        deviceHandle: Long,
+        hasCalibrationData: Boolean,
+        ts: Long,
+        failReason: Int,
+        individualFrequency: Float,
+        individualPeakFrequency: Float,
+        individualPeakFrequencyPower: Float,
+        individualPeakFrequencySuppression: Float,
+        individualBandwidth: Float,
+        individualNormalizedPower: Float,
+        lowerFrequency: Float,
+        upperFrequency: Float,
+    ): Long
+    external fun nativeSetCardioStateSink(sink: EventChannel.EventSink?)
+    external fun nativeSetCardioPpgSink(sink: EventChannel.EventSink?)
+    external fun nativeSetCardioCalibratedSink(sink: EventChannel.EventSink?)
+    external fun nativeDisposeCardio(cardioHandle: Long)
 }
 
 /**

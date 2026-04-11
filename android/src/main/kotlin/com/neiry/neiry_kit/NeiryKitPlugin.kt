@@ -22,6 +22,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     private var nfbCalibratorBridge: NfbCalibratorBridge? = null
     private var emotionsBridge: EmotionsBridge? = null
     private var physioBridge: PhysioBridge? = null
+    private var cardioBridge: CardioBridge? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         nativeBridge = NativeBridge()  // triggers System.loadLibrary via companion init
@@ -31,6 +32,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
         nfbCalibratorBridge = NfbCalibratorBridge(nativeBridge!!)
         emotionsBridge = EmotionsBridge(nativeBridge!!)
         physioBridge = PhysioBridge(nativeBridge!!)
+        cardioBridge = CardioBridge(nativeBridge!!)
 
         val messenger = flutterPluginBinding.binaryMessenger
 
@@ -69,6 +71,9 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
                 put(id, handler)
             }
             for ((id, handler) in physioBridge!!.allStreamHandlers()) {
+                put(id, handler)
+            }
+            for ((id, handler) in cardioBridge!!.allStreamHandlers()) {
                 put(id, handler)
             }
         }
@@ -371,7 +376,33 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun handleCardioCall(call: MethodCall, result: Result) {
-        result.notImplemented()
+        val bridge = cardioBridge
+            ?: return result.error("NOT_INITIALIZED", "CardioBridge not initialized", null)
+        val devBridge = deviceBridge
+            ?: return result.error("NOT_INITIALIZED", "DeviceBridge not initialized", null)
+        try {
+            when (call.method) {
+                "create" -> {
+                    bridge.create(devBridge.requireHandle())
+                    result.success(null)
+                }
+                "createCalibrated" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val calibrationData = (call.arguments as? Map<*, *>)?.get("calibrationData") as? Map<String, Any>
+                    bridge.createCalibrated(devBridge.requireHandle(), calibrationData)
+                    result.success(null)
+                }
+                "dispose" -> {
+                    bridge.dispose()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        } catch (e: FlutterError) {
+            result.error(e.code, e.message, e.details)
+        } catch (e: Exception) {
+            result.error("UNKNOWN", e.message, null)
+        }
     }
 
     private fun handleProductivityCall(call: MethodCall, result: Result) {
@@ -383,6 +414,8 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        cardioBridge?.dispose()
+        cardioBridge = null
         physioBridge?.dispose()
         physioBridge = null
         emotionsBridge?.dispose()
