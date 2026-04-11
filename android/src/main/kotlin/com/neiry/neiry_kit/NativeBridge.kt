@@ -137,6 +137,33 @@ class NativeBridge {
     external fun nativeSetCardioPpgSink(sink: EventChannel.EventSink?)
     external fun nativeSetCardioCalibratedSink(sink: EventChannel.EventSink?)
     external fun nativeDisposeCardio(cardioHandle: Long)
+
+    // ── Productivity classifier ───────────────────────────────────────────────
+
+    external fun nativeCreateProductivity(deviceHandle: Long): Long
+    external fun nativeCreateProductivityWithIndividualData(
+        deviceHandle: Long,
+        ts: Long,
+        failReason: Int,
+        individualFrequency: Float,
+        individualPeakFrequency: Float,
+        individualPeakFrequencyPower: Float,
+        individualPeakFrequencySuppression: Float,
+        individualBandwidth: Float,
+        individualNormalizedPower: Float,
+        lowerFrequency: Float,
+        upperFrequency: Float,
+    ): Long
+    external fun nativeSetProductivityMetricsSink(sink: EventChannel.EventSink?)
+    external fun nativeSetProductivityIndexesSink(sink: EventChannel.EventSink?)
+    external fun nativeSetProductivityBaselinesSink(sink: EventChannel.EventSink?)
+    external fun nativeSetProductivityCalibrationProgressSink(sink: EventChannel.EventSink?)
+    external fun nativeSetProductivityCalibratedSink(sink: EventChannel.EventSink?)
+    external fun nativeSetProductivityIndividualNfbSink(sink: EventChannel.EventSink?)
+    external fun nativeStartProductivityBaselineCalibration(prodHandle: Long)
+    external fun nativeImportProductivityBaselines(prodHandle: Long, baselinesBytes: ByteArray)
+    external fun nativeResetAccumulatedFatigue(prodHandle: Long)
+    external fun nativeDisposeProductivity(prodHandle: Long)
 }
 
 /**
