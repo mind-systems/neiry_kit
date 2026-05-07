@@ -41,6 +41,15 @@ class DeviceStreamHandler: NSObject, FlutterStreamHandler {
             captured?(FlutterError(code: code, message: message, details: nil))
         }
     }
+
+    /// Dispatches a list of maps to the Dart event sink on the main thread.
+    /// Safe to call from any thread; silently drops events when no listener is attached.
+    func sendList(_ list: [[String: Any]]) {
+        let captured = sink
+        DispatchQueue.main.async {
+            captured?(list)
+        }
+    }
 }
 
 // MARK: - DeviceBridge

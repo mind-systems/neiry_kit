@@ -15,6 +15,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
     private var physioBridge: PhysioBridge?
     private var cardioBridge: CardioBridge?
     private var productivityBridge: ProductivityBridge?
+    private var memsBridge: MemsBridge?
 
     private init(registrar: FlutterPluginRegistrar) {
         self.registrar = registrar
@@ -32,6 +33,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         instance.physioBridge = PhysioBridge()
         instance.cardioBridge = CardioBridge()
         instance.productivityBridge = ProductivityBridge()
+        instance.memsBridge = MemsBridge()
         instance.registerEventChannels()
     }
 
@@ -48,6 +50,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             "neiry_kit/productivity",
             "neiry_kit/cardio",
             "neiry_kit/nfb_calibrator",
+            "neiry_kit/mems",
         ]
         for id in ids {
             let channel = FlutterMethodChannel(name: id, binaryMessenger: messenger)
@@ -75,6 +78,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             handleCardioCall(call, result: result)
         } else if channelId == "neiry_kit/productivity" {
             handleProductivityCall(call, result: result)
+        } else if channelId == "neiry_kit/mems" {
+            handleMemsCall(call, result: result)
         } else {
             result(FlutterMethodNotImplemented)
         }
@@ -146,6 +151,7 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             result(nil)
         case "dispose":
             nfbCalibratorBridge?.stopCalibration()
+            memsBridge?.dispose()
             cardioBridge?.dispose()
             productivityBridge?.dispose()
             emotionsBridge?.dispose()
@@ -532,6 +538,44 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    // MARK: - mems dispatch
+
+    private func handleMemsCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let memsBridge = memsBridge, let deviceBridge = deviceBridge else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "MemsBridge or DeviceBridge not initialized", details: nil))
+            return
+        }
+        switch call.method {
+        case "create":
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try memsBridge.create(device: dev)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "createCalibrated":
+            let args = call.arguments as? [String: Any]
+            let calibrationData = args?["calibrationData"] as? [String: Any]
+            do {
+                let dev = try deviceBridge.requireDevice()
+                try memsBridge.createCalibrated(device: dev, calibrationData: calibrationData)
+                result(nil)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "dispose":
+            memsBridge.dispose()
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
     // MARK: - productivity dispatch
 
     private func handleProductivityCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -665,6 +709,14 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             }
         }
 
+        // Build lookup for the MEMS stream handler
+        var memsHandlers: [String: FlutterStreamHandler] = [:]
+        if let bridge = memsBridge {
+            for (id, handler) in bridge.allStreamHandlers() {
+                memsHandlers[id] = handler
+            }
+        }
+
         let ids: [String] = [
             "neiry_kit/events/deviceList",
             "neiry_kit/events/eeg",
@@ -713,6 +765,8 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             } else if let handler = cardioHandlers[id] {
                 channel.setStreamHandler(handler)
             } else if let handler = productivityHandlers[id] {
+                channel.setStreamHandler(handler)
+            } else if let handler = memsHandlers[id] {
                 channel.setStreamHandler(handler)
             } else {
                 channel.setStreamHandler(StubStreamHandler())
