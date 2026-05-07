@@ -1,5 +1,6 @@
 export 'src/api/classifiers/cardio_classifier.dart';
 export 'src/api/classifiers/emotions_classifier.dart';
+export 'src/api/classifiers/mems_classifier.dart';
 export 'src/api/classifiers/nfb_classifier.dart';
 export 'src/api/classifiers/physio_classifier.dart';
 export 'src/api/classifiers/productivity_classifier.dart';

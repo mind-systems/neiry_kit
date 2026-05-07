@@ -15,6 +15,7 @@ abstract final class NeiryChannels {
   static const String emotions = 'neiry_kit/emotions';
   static const String productivity = 'neiry_kit/productivity';
   static const String cardio = 'neiry_kit/cardio';
+  static const String mems = 'neiry_kit/mems';
   static const String nfbCalibrator = 'neiry_kit/nfb_calibrator';
 }
 
