@@ -34,6 +34,7 @@ var _c_device_8h =
     [ "clCDevice_GetBatteryCharge", "_c_device_8h.html#ac42a1ca579c2c1345266f8a6cdc01349", null ],
     [ "clCDevice_GetChannelNames", "_c_device_8h.html#abf2798e38ab3b8a7063fe1559e72a71b", null ],
     [ "clCDevice_GetEEGSampleRate", "_c_device_8h.html#a9b03236505b73d17188433c31cd58627", null ],
+    [ "clCDevice_GetFirmwareVersion", "_c_device_8h.html#a4fb3f28d0f82aa992b55a8a5f1208c55", null ],
     [ "clCDevice_GetInfo", "_c_device_8h.html#ad40df82961b5228bc80134d137b7801b", null ],
     [ "clCDevice_GetMEMSSampleRate", "_c_device_8h.html#af324387b7cf2e6151d4656022c18311c", null ],
     [ "clCDevice_GetMode", "_c_device_8h.html#a191c2522940bf532bb8d148b338cec69", null ],

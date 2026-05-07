@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['1_204_200_0',['Capsule v 1.4.0',['../capsule_updates.html#autotoc_md8',1,'']]],
-  ['1_204_205_1',['Capsule v 1.4.5',['../capsule_updates.html#autotoc_md6',1,'']]],
-  ['1_205_200_2',['Capsule v 1.5.0',['../capsule_updates.html#autotoc_md4',1,'']]]
+  ['beta_0',['beta',['../structcl_c_n_f_b___user_state.html#aaa23148f768a34d4aca39577b57039ad',1,'clCNFB_UserState::beta'],['../structcl_c_physiological_states___baselines.html#a53493a81688c19f86bed5657e87352dc',1,'clCPhysiologicalStates_Baselines::beta']]],
+  ['betagravity_1',['betaGravity',['../structcl_c_physiological_states___baselines.html#ae1d87d019d4f0ac85042261c0388106f',1,'clCPhysiologicalStates_Baselines']]]
 ];

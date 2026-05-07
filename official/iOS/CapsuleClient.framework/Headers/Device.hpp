@@ -52,6 +52,7 @@ class CL_DLL DeviceLocator final {
     void SetOnDevicesEvent(std::function<void(DeviceLocator&, const device::DeviceListExpected&)>&& callback);
 
     static void SetSingleThreaded(bool singleThreaded);
+
     void Update();
 
     bool IsValid() const noexcept;
@@ -88,12 +89,14 @@ class CL_DLL Device final {
      * Get device information.
      * \returns device info
      */
-    const device::DeviceInfo& GetInfo() &;
+    const device::DeviceInfo& GetInfo() const&;
     float GetEEGSampleRate() const;
     float GetPPGSampleRate() const;
     float GetMEMSSampleRate() const;
     int GetPPGIrAmplitude() const;
     int GetPPGRedAmplitude() const;
+
+    std::string GetFirmwareVersion() const;
 
     void SetOnConnectionStateChangedEvent(std::function<void(Device&, device::DeviceConnectionStatus)>&& callback);
     void SetOnResistanceUpdateEvent(std::function<void(Device&, device::Resistances&&)>&& callback);

@@ -106,6 +106,15 @@ CL_DLL void clCDevice_Disconnect(clCDevice device, clCError* error) NOEXCEPT;
 CL_DLL uint8_t clCDevice_GetBatteryCharge(clCDevice device, clCError* error) NOEXCEPT;
 
 /**
+ * \brief Get device firmware version. Only contains info after device is connected.
+ *
+ * \param device device handle
+ * \param error out parameter for error
+ * \return firmware version
+ */
+CL_DLL const char* clCDevice_GetFirmwareVersion(clCDevice device, clCError* error) NOEXCEPT;
+
+/**
  * \brief Start device
  *
  * \param device device handle

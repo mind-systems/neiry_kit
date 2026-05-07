@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['beta_0',['beta',['../structcl_c_n_f_b___user_state.html#aaa23148f768a34d4aca39577b57039ad',1,'clCNFB_UserState::beta'],['../structcl_c_physiological_states___baselines.html#a53493a81688c19f86bed5657e87352dc',1,'clCPhysiologicalStates_Baselines::beta']]],
-  ['betagravity_1',['betaGravity',['../structcl_c_physiological_states___baselines.html#ae1d87d019d4f0ac85042261c0388106f',1,'clCPhysiologicalStates_Baselines']]]
+  ['hasartifacts_0',['hasArtifacts',['../structcl_c_cardio___data.html#a3f277bbd0c087ad65ce1747ba2453782',1,'clCCardio_Data::hasArtifacts'],['../structcl_c_productivity___indexes.html#a539ae106ccff6806337809b9233f35c3',1,'clCProductivity_Indexes::hasArtifacts']]],
+  ['heartrate_1',['heartRate',['../structcl_c_cardio___data.html#acb9b653123b23010f765e6799d2dcf76',1,'clCCardio_Data']]]
 ];

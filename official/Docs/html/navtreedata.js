@@ -25,22 +25,12 @@
 var NAVTREE =
 [
   [ "Capsule API Example", "index.html", [
-    [ "Capsule Flow", "capsule_flow.html", "capsule_flow" ],
-    [ "Firmware", "firmware.html", "firmware" ],
-    [ "Get Started", "get_started.html", "get_started" ],
-    [ "Glossary", "glossary.html", null ],
-    [ "Namespaces", "namespaces.html", [
-      [ "Namespace List", "namespaces.html", "namespaces_dup" ]
-    ] ],
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
       [ "Class Index", "classes.html", null ],
-      [ "Class Hierarchy", "hierarchy.html", "hierarchy" ],
       [ "Class Members", "functions.html", [
         [ "All", "functions.html", null ],
-        [ "Functions", "functions_func.html", null ],
-        [ "Variables", "functions_vars.html", null ],
-        [ "Enumerations", "functions_enum.html", null ]
+        [ "Variables", "functions_vars.html", null ]
       ] ]
     ] ],
     [ "Files", "files.html", [
@@ -60,8 +50,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_c_capsule_a_p_i_8h.html",
-"_c_p_s_d_data_8h.html#af69ff39a2db2155fc6c7881b5a0de92da4072c09d07bf914ac7a99bc165261c2d",
-"classcapsule_1_1client_1_1_device.html#a6df40f58424703aea5291e2ec75038f7"
+"_c_p_s_d_data_8h.html#af69ff39a2db2155fc6c7881b5a0de92da1fa4d2eae9c2f31fe663157f29ea68cd"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['hasartifacts_0',['hasArtifacts',['../structcl_c_cardio___data.html#a3f277bbd0c087ad65ce1747ba2453782',1,'clCCardio_Data::hasArtifacts'],['../structcl_c_productivity___indexes.html#a539ae106ccff6806337809b9233f35c3',1,'clCProductivity_Indexes::hasArtifacts']]],
-  ['heartrate_1',['heartRate',['../structcl_c_cardio___data.html#acb9b653123b23010f765e6799d2dcf76',1,'clCCardio_Data']]]
+  ['productivity_0',['productivity',['../structcl_c_productivity___baselines.html#a482d0d45499c12ab4b9bc035c842e5e7',1,'clCProductivity_Baselines']]],
+  ['productivitybaseline_1',['productivityBaseline',['../structcl_c_productivity___metrics.html#a75aa61e21bd470fe1d1a32a0c07c80c0',1,'clCProductivity_Metrics::productivityBaseline'],['../structcl_c_productivity___indexes.html#a1b72a3e4b5cc9665abb8477f4426dd3e',1,'clCProductivity_Indexes::productivityBaseline']]],
+  ['productivityscore_2',['productivityScore',['../structcl_c_productivity___metrics.html#aa05b479542d809373bc44c5396525c40',1,'clCProductivity_Metrics']]]
 ];

@@ -44,3 +44,6 @@ migrate_working_dir/
 # Xcode
 **/xcuserdata/
 **/*.xcscmblueprint
+
+# Neiry SDK — full release archives (only vendored artifacts in official/iOS|Android|Docs are tracked)
+official/Capsule*/

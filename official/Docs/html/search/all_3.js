@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['5_0',['Capsule v 1.4.5',['../capsule_updates.html#autotoc_md6',1,'']]],
-  ['5_200_1',['Capsule v 1.5.0',['../capsule_updates.html#autotoc_md4',1,'']]]
+  ['delta_0',['delta',['../structcl_c_n_f_b___user_state.html#ac431dd3477a2cc9b04db8bce11d2ff8f',1,'clCNFB_UserState']]]
 ];
