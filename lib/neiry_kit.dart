@@ -16,6 +16,7 @@ export 'src/models/eeg_artifact_data.dart';
 export 'src/models/eeg_data.dart';
 export 'src/models/emotions_states.dart';
 export 'src/models/individual_nfb_data.dart';
+export 'src/models/mems_data.dart';
 export 'src/models/neiry_error.dart';
 export 'src/models/neiry_error_code.dart';
 export 'src/models/neiry_exception.dart';
