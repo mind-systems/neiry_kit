@@ -241,6 +241,15 @@ class DeviceBridge(private val nativeBridge: NativeBridge) {
         }
     }
 
+    fun getFirmwareVersion(): String {
+        val h = requireHandle()
+        return try {
+            nativeBridge.nativeGetFirmwareVersion(h)
+        } catch (e: RuntimeException) {
+            throw parseSdkError(e.message ?: "255|Unknown error")
+        }
+    }
+
     // ── Channel name accessors ────────────────────────────────────────────────
 
     fun getChannelNames(): List<String> {

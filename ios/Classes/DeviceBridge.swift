@@ -506,6 +506,17 @@ class DeviceBridge: NSObject {
         return result
     }
 
+    func getFirmwareVersion() throws -> String {
+        let dev = try requireDevice()
+        var error = clCError()
+        let result = clCDevice_GetFirmwareVersion(dev, &error)
+        try checkCError(error)
+        guard let result = result else {
+            throw FlutterError(code: "NULL_RESULT", message: "clCDevice_GetFirmwareVersion returned nil", details: nil)
+        }
+        return String(cString: result)
+    }
+
     // MARK: - Channel name accessors
 
     func getChannelNames() throws -> [String] {

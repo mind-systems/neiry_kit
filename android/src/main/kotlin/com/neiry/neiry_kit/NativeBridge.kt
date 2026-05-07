@@ -52,6 +52,7 @@ class NativeBridge {
     external fun nativeGetMEMSSampleRate(handle: Long): Float
     external fun nativeGetPPGIrAmplitude(handle: Long): Int
     external fun nativeGetPPGRedAmplitude(handle: Long): Int
+    external fun nativeGetFirmwareVersion(handle: Long): String
     external fun nativeGetChannelNames(handle: Long): List<String>
     external fun nativeGetChannelsCount(handle: Long): Int
     external fun nativeGetChannelIndexByName(handle: Long, channelName: String): Int

@@ -304,6 +304,15 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             } catch {
                 result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
             }
+        case "getFirmwareVersion":
+            do {
+                let version = try bridge.getFirmwareVersion()
+                result(version)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
         default:
             result(FlutterMethodNotImplemented)
         }

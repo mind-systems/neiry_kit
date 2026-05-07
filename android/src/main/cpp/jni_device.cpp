@@ -355,6 +355,20 @@ Java_com_neiry_neiry_1kit_NativeBridge_nativeGetPPGRedAmplitude(
     return (jint)result;
 }
 
+JNIEXPORT jstring JNICALL
+Java_com_neiry_neiry_1kit_NativeBridge_nativeGetFirmwareVersion(
+    JNIEnv* env, jobject, jlong handle)
+{
+    clCDevice dev = (clCDevice)(uintptr_t)handle;
+    clCError error = {};
+    const char* result = clCDevice_GetFirmwareVersion(dev, &error);
+    if (!error.success) {
+        throw_sdk_error(env, &error);
+        return nullptr;
+    }
+    return env->NewStringUTF(result ? result : "");
+}
+
 // ── Channel names ─────────────────────────────────────────────────────────────
 
 JNIEXPORT jobject JNICALL

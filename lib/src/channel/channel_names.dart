@@ -100,6 +100,7 @@ abstract final class DeviceMethods {
   static const String getChannelIndexByName = 'getChannelIndexByName';
   static const String getChannelNameByIndex = 'getChannelNameByIndex';
   static const String getChannelsCount = 'getChannelsCount';
+  static const String getFirmwareVersion = 'getFirmwareVersion';
 }
 
 /// Method names shared across all classifier MethodChannels

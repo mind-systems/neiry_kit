@@ -400,4 +400,15 @@ class Device {
     );
     return result!;
   }
+
+  /// Returns the firmware version string of the device.
+  Future<String> getFirmwareVersion() async {
+    _checkNotDisposed();
+    _checkConnected();
+    final result = await _channel.invokeMethod<String>(
+      DeviceMethods.getFirmwareVersion,
+      {NeiryArgs.serial: serial},
+    );
+    return result!;
+  }
 }

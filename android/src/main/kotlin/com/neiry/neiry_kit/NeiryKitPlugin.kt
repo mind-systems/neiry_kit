@@ -222,6 +222,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
                 "getMEMSSampleRate" -> result.success(bridge.getMEMSSampleRate())
                 "getPPGIrAmplitude" -> result.success(bridge.getPPGIrAmplitude())
                 "getPPGRedAmplitude" -> result.success(bridge.getPPGRedAmplitude())
+                "getFirmwareVersion" -> result.success(bridge.getFirmwareVersion())
                 "getChannelNames" -> result.success(bridge.getChannelNames())
                 "getChannelsCount" -> result.success(bridge.getChannelsCount())
                 "getChannelIndexByName" -> {
