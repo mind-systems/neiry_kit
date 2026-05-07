@@ -23,6 +23,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     private var emotionsBridge: EmotionsBridge? = null
     private var physioBridge: PhysioBridge? = null
     private var cardioBridge: CardioBridge? = null
+    private var memsBridge: MemsBridge? = null
     private var productivityBridge: ProductivityBridge? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -34,6 +35,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
         emotionsBridge = EmotionsBridge(nativeBridge!!)
         physioBridge = PhysioBridge(nativeBridge!!)
         cardioBridge = CardioBridge(nativeBridge!!)
+        memsBridge = MemsBridge(nativeBridge!!)
         productivityBridge = ProductivityBridge(nativeBridge!!)
 
         val messenger = flutterPluginBinding.binaryMessenger
@@ -47,6 +49,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
             "neiry_kit/emotions",
             "neiry_kit/productivity",
             "neiry_kit/cardio",
+            "neiry_kit/mems",
             "neiry_kit/nfb_calibrator",
         )
         for (id in methodChannelIds) {
@@ -76,6 +79,9 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
                 put(id, handler)
             }
             for ((id, handler) in cardioBridge!!.allStreamHandlers()) {
+                put(id, handler)
+            }
+            for ((id, handler) in memsBridge!!.allStreamHandlers()) {
                 put(id, handler)
             }
             for ((id, handler) in productivityBridge!!.allStreamHandlers()) {
@@ -132,6 +138,7 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
             "neiry_kit/emotions"       -> handleEmotionsCall(call, result)
             "neiry_kit/physiological"  -> handlePhysiologicalCall(call, result)
             "neiry_kit/cardio"         -> handleCardioCall(call, result)
+            "neiry_kit/mems"           -> handleMemsCall(call, result)
             "neiry_kit/productivity"   -> handleProductivityCall(call, result)
             else                       -> result.notImplemented()
         }
@@ -411,6 +418,36 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
         }
     }
 
+    private fun handleMemsCall(call: MethodCall, result: Result) {
+        val bridge = memsBridge
+            ?: return result.error("NOT_INITIALIZED", "MemsBridge not initialized", null)
+        val devBridge = deviceBridge
+            ?: return result.error("NOT_INITIALIZED", "DeviceBridge not initialized", null)
+        try {
+            when (call.method) {
+                "create" -> {
+                    bridge.create(devBridge.requireHandle())
+                    result.success(null)
+                }
+                "createCalibrated" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val calibrationData = (call.arguments as? Map<*, *>)?.get("calibrationData") as? Map<String, Any>
+                    bridge.createCalibrated(devBridge.requireHandle(), calibrationData)
+                    result.success(null)
+                }
+                "dispose" -> {
+                    bridge.dispose()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        } catch (e: FlutterError) {
+            result.error(e.code, e.message, e.details)
+        } catch (e: Exception) {
+            result.error("UNKNOWN", e.message, null)
+        }
+    }
+
     private fun handleProductivityCall(call: MethodCall, result: Result) {
         val bridge = productivityBridge
             ?: return result.error("NOT_INITIALIZED", "ProductivityBridge not initialized", null)
@@ -463,6 +500,8 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         productivityBridge?.dispose()
         productivityBridge = null
+        memsBridge?.dispose()
+        memsBridge = null
         cardioBridge?.dispose()
         cardioBridge = null
         physioBridge?.dispose()

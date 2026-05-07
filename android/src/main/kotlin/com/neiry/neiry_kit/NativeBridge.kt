@@ -139,6 +139,21 @@ class NativeBridge {
     external fun nativeSetCardioCalibratedSink(sink: EventChannel.EventSink?)
     external fun nativeDisposeCardio(cardioHandle: Long)
 
+    // ── MEMS sensor ───────────────────────────────────────────────────────────
+
+    external fun nativeCreateMems(deviceHandle: Long): Long
+    external fun nativeCreateMemsCalibrated(
+        deviceHandle: Long,
+        hasCalibrationData: Boolean,
+        ts: Long, failReason: Int,
+        individualFrequency: Float, individualPeakFrequency: Float,
+        individualPeakFrequencyPower: Float, individualPeakFrequencySuppression: Float,
+        individualBandwidth: Float, individualNormalizedPower: Float,
+        lowerFrequency: Float, upperFrequency: Float,
+    ): Long
+    external fun nativeSetMemsDataSink(sink: EventChannel.EventSink?)
+    external fun nativeDisposeMems(memsHandle: Long)
+
     // ── Productivity classifier ───────────────────────────────────────────────
 
     external fun nativeCreateProductivity(deviceHandle: Long): Long
