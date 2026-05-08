@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'screens/calibration_screen.dart';
 import 'screens/classifiers_screen.dart';
 import 'screens/device_screen.dart';
+import 'screens/mems_screen.dart';
 import 'screens/productivity_cardio_screen.dart';
 import 'screens/streams_screen.dart';
 
@@ -29,6 +30,9 @@ final GoRouter appRouter = GoRouter(
           GoRoute(
               path: '/productivity',
               builder: (_, _) => const ProductivityCardioScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/mems', builder: (_, _) => const MemsScreen()),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(
@@ -60,6 +64,7 @@ class _RootScaffold extends StatelessWidget {
               icon: Icon(Icons.ssid_chart), label: 'Classifiers'),
           NavigationDestination(
               icon: Icon(Icons.trending_up), label: 'Productivity'),
+          NavigationDestination(icon: Icon(Icons.sensors), label: 'MEMS'),
           NavigationDestination(icon: Icon(Icons.tune), label: 'Calibration'),
         ],
       ),
