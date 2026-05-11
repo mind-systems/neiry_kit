@@ -1,6 +1,9 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/active_device_provider.dart';
 import '../providers/device_scan_provider.dart';
@@ -29,9 +32,57 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     super.dispose();
   }
 
+  // ── Permissions ───────────────────────────────────────────────────────────
+
+  Future<bool> _checkAndRequestPermissions() async {
+    // iOS shows its Bluetooth dialog automatically via the Info.plist key;
+    // no runtime request is needed on that platform.
+    if (!Platform.isAndroid) return true;
+
+    // Request all three permissions unconditionally on every supported API level.
+    // On Android 12+ (API 31+) the BLE pair is required and locationWhenInUse
+    // auto-grants because the plugin manifest caps ACCESS_FINE_LOCATION /
+    // ACCESS_COARSE_LOCATION with android:maxSdkVersion="30" — those permissions
+    // simply don't exist in the merged manifest at API 31+.
+    // On Android 8–11 (API 26–30) only locationWhenInUse is required; the BLE
+    // pair is auto-granted by permission_handler because those runtime permissions
+    // don't exist on those API levels.
+    // We deliberately avoid device_info_plus for SDK-level branching — adding a
+    // new dependency just to gate platform code is unnecessary when
+    // permission_handler already handles the no-op cases correctly.
+    final permissions = <Permission>[
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.locationWhenInUse,
+    ];
+
+    final statuses = await permissions.request();
+
+    // Check permanently-denied first — on repeated denial Android returns
+    // permanentlyDenied, and the only recovery is opening app settings.
+    // (This ordering is deliberate; do not reorder in future edits.)
+    if (statuses.values.any(
+      (s) => s == PermissionStatus.permanentlyDenied,
+    )) {
+      await openAppSettings();
+      return false;
+    }
+
+    // Plain denied / restricted / limited — user can retry by tapping Scan again.
+    if (statuses.values.any((s) => s != PermissionStatus.granted)) {
+      if (!mounted) return false;
+      _showError('Bluetooth permissions required');
+      return false;
+    }
+
+    return true;
+  }
+
   // ── Scan ──────────────────────────────────────────────────────────────────
 
-  void _scan() {
+  Future<void> _scan() async {
+    if (!await _checkAndRequestPermissions()) return;
+    if (!mounted) return;
     final params = (_selectedType, _searchTime);
     if (_scanParams == params) {
       // Same params — invalidate so the provider re-runs the scan.
