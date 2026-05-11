@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neiry_kit/neiry_kit.dart';
 
 import '../providers/calibration_provider.dart';
 import '../providers/calibration_timer_provider.dart';
@@ -21,6 +22,8 @@ class CalibrationScreen extends ConsumerWidget {
             _CalibrationCard(),
             SizedBox(height: 12),
             _NfbCard(),
+            SizedBox(height: 12),
+            _CalibrationDataCard(),
           ],
         ),
       ),
@@ -283,6 +286,38 @@ class _BandRow extends StatelessWidget {
           SizedBox(width: 60, child: Text(label)),
           Text(display),
         ],
+      ),
+    );
+  }
+}
+
+// ── Calibration data card ─────────────────────────────────────────────────────
+
+class _CalibrationDataCard extends ConsumerWidget {
+  const _CalibrationDataCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(calibrationProvider).value ?? const IndividualNfbData();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Individual Alpha',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            _BandRow('Peak, Hz', data.individualFrequency),
+            _BandRow('Lower, Hz', data.lowerFrequency),
+            _BandRow('Upper, Hz', data.upperFrequency),
+            _BandRow('Bandwidth, Hz', data.individualBandwidth),
+            _BandRow('Norm. power', data.individualNormalizedPower),
+          ],
+        ),
       ),
     );
   }
