@@ -29,7 +29,7 @@ class ResistanceData {
       channelNames:
           (map['channelNames'] as List).map((v) => v as String).toList(),
       values:
-          (map['values'] as List).map((v) => (v as num).toDouble()).toList(),
+          (map['values'] as List).map((v) => (v as num).toDouble() / 1000.0).toList(),
       channelCount: map['channelCount'] as int,
     );
   }

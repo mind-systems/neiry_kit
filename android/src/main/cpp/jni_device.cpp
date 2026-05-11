@@ -83,6 +83,9 @@ jmethodID s_doubleValueOf = nullptr;
 jclass    s_boolClass     = nullptr;
 jmethodID s_boolValueOf   = nullptr;
 jclass    s_stringClass   = nullptr;
+jclass    s_alClass       = nullptr;
+jmethodID s_alCtor        = nullptr;
+jmethodID s_alAdd         = nullptr;
 
 void init_map_cache(JNIEnv* env) {
     if (s_hmClass) return;
@@ -116,6 +119,11 @@ void init_map_cache(JNIEnv* env) {
 
     local = env->FindClass("java/lang/String");
     s_stringClass = (jclass)env->NewGlobalRef(local); env->DeleteLocalRef(local);
+
+    local = env->FindClass("java/util/ArrayList");
+    s_alClass = (jclass)env->NewGlobalRef(local); env->DeleteLocalRef(local);
+    s_alCtor  = env->GetMethodID(s_alClass, "<init>", "()V");
+    s_alAdd   = env->GetMethodID(s_alClass, "add", "(Ljava/lang/Object;)Z");
 }
 
 jobject make_map(JNIEnv* env) {
@@ -767,8 +775,8 @@ static void on_eeg_data(clCDevice device, clCEEGTimedData data) noexcept {
     jobject      sink_ref        = nullptr;
     jobject      handler_ref     = nullptr;
     jobject      map             = nullptr;
-    jobjectArray rawValues       = nullptr;
-    jobjectArray processedValues = nullptr;
+    jobject      rawValues       = nullptr;
+    jobject      processedValues = nullptr;
     jfloat*      buf             = nullptr;
 
     jint rc = g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -803,10 +811,8 @@ static void on_eeg_data(clCDevice device, clCEEGTimedData data) noexcept {
         uint64_t ts = clCEEGTimedData_GetTimestampMilli(data, 0, &error);
         if (!error.success) goto cleanup;
 
-        jclass floatArrayClass = env->FindClass("[F");
-        rawValues       = env->NewObjectArray(channelCount, floatArrayClass, nullptr);
-        processedValues = env->NewObjectArray(channelCount, floatArrayClass, nullptr);
-        env->DeleteLocalRef(floatArrayClass);
+        rawValues       = env->NewObject(s_alClass, s_alCtor);
+        processedValues = env->NewObject(s_alClass, s_alCtor);
 
         if (sampleCount > 0) {
             buf = new jfloat[sampleCount];
@@ -822,7 +828,7 @@ static void on_eeg_data(clCDevice device, clCEEGTimedData data) noexcept {
             if (!ok) break;
             jfloatArray inner = env->NewFloatArray(sampleCount);
             if (sampleCount > 0) env->SetFloatArrayRegion(inner, 0, sampleCount, buf);
-            env->SetObjectArrayElement(rawValues, ch, inner);
+            env->CallBooleanMethod(rawValues, s_alAdd, inner);
             env->DeleteLocalRef(inner);
 
             for (int s = 0; s < sampleCount && ok; ++s) {
@@ -833,7 +839,7 @@ static void on_eeg_data(clCDevice device, clCEEGTimedData data) noexcept {
             if (!ok) break;
             inner = env->NewFloatArray(sampleCount);
             if (sampleCount > 0) env->SetFloatArrayRegion(inner, 0, sampleCount, buf);
-            env->SetObjectArrayElement(processedValues, ch, inner);
+            env->CallBooleanMethod(processedValues, s_alAdd, inner);
             env->DeleteLocalRef(inner);
         }
         if (!ok) goto cleanup;
@@ -868,7 +874,7 @@ static void on_psd_data(clCDevice device, clCPSDData data) noexcept {
     jobject      handler_ref = nullptr;
     jobject      map         = nullptr;
     jdoubleArray frequencies = nullptr;
-    jobjectArray values      = nullptr;
+    jobject      values      = nullptr;
     jdouble*     buf         = nullptr;
 
     jint rc = g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -919,10 +925,8 @@ static void on_psd_data(clCDevice device, clCPSDData data) noexcept {
             buf = nullptr;
         }
 
-        // PSD values: double[channels][frequencies]
-        jclass doubleArrayClass = env->FindClass("[D");
-        values = env->NewObjectArray(channelCount, doubleArrayClass, nullptr);
-        env->DeleteLocalRef(doubleArrayClass);
+        // PSD values: List<double[]> per channel
+        values = env->NewObject(s_alClass, s_alCtor);
 
         if (freqCount > 0) {
             buf = new jdouble[freqCount];
@@ -937,7 +941,7 @@ static void on_psd_data(clCDevice device, clCPSDData data) noexcept {
             if (!ok) break;
             jdoubleArray inner = env->NewDoubleArray(freqCount);
             if (freqCount > 0) env->SetDoubleArrayRegion(inner, 0, freqCount, buf);
-            env->SetObjectArrayElement(values, ch, inner);
+            env->CallBooleanMethod(values, s_alAdd, inner);
             env->DeleteLocalRef(inner);
         }
         if (!ok) goto cleanup;
@@ -1111,7 +1115,7 @@ static void on_resistance_data(clCDevice device, clCResistance data) noexcept {
     jobject      sink_ref     = nullptr;
     jobject      handler_ref  = nullptr;
     jobject      map          = nullptr;
-    jobjectArray channelNames = nullptr;
+    jobject      channelNames = nullptr;
     jfloatArray  values       = nullptr;
 
     jint rc = g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -1136,14 +1140,14 @@ static void on_resistance_data(clCDevice device, clCResistance data) noexcept {
     {
         int32_t count = clCResistance_GetCount(data);  // no clCError*
 
-        channelNames = env->NewObjectArray(count, s_stringClass, nullptr);
+        channelNames = env->NewObject(s_alClass, s_alCtor);
         values       = env->NewFloatArray(count);
 
         jfloat* valueBuf = new jfloat[count];
         for (int i = 0; i < count; ++i) {
             const char* cName = clCResistance_GetChannelName(data, i);
             jstring jName = env->NewStringUTF(cName ? cName : "");
-            env->SetObjectArrayElement(channelNames, i, jName);
+            env->CallBooleanMethod(channelNames, s_alAdd, jName);
             env->DeleteLocalRef(jName);
 
             valueBuf[i] = (jfloat)clCResistance_GetValue(data, i);
