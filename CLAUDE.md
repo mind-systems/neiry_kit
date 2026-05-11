@@ -91,6 +91,19 @@ flutter analyze
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+## Documentation
+
+| Guide | Path |
+|---|---|
+| Project setup (deps, permissions, iOS plist) | `docs/guides/setup.md` |
+| Full session walkthrough | `docs/guides/session-guide.md` |
+| Error handling & exception types | `docs/guides/error-handling.md` |
+| Example app structure | `docs/guides/example-app.md` |
+| Device lifecycle (DeviceLocator, Device) | `docs/reference/device-lifecycle.md` |
+| Data streams (EEG, PSD, resistance, battery) | `docs/reference/data-streams.md` |
+| Classifiers (NFB, physio, emotions, productivity, cardio, MEMS) | `docs/reference/classifiers.md` |
+| NFB calibration | `docs/reference/calibration.md` |
+
 ## Integration into mind_mobile
 
 Once the Dart API is stable here, `mind_mobile` adds `neiry_kit` as a path or pub dependency. Do not copy native binaries — they live here only.
