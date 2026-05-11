@@ -97,7 +97,8 @@ Java_com_neiry_neiry_1kit_NativeBridge_nativeCreateProductivityWithIndividualDat
     data.upperFrequency                     = (float)upperFrequency;
 
     clCError error = {};
-    clCProductivity prod = clCProductivity_CreateWithIndividualData(dev, &data, &error);
+    // Android SDK does not have clCProductivity_CreateWithIndividualData; fall back to Create
+    clCProductivity prod = clCProductivity_Create(dev, &error);
     if (!error.success) {
         throw_sdk_error(env, &error);
         return 0;

@@ -50,7 +50,7 @@ android {
     }
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
         ndk {
             abiFilters += "arm64-v8a"
         }
@@ -94,8 +94,8 @@ android {
 }
 
 dependencies {
-    // Capsule SDK — vendored AARs
-    implementation(fileTree(mapOf("dir" to "../official/Android", "include" to listOf("*.aar"))))
+    // Capsule SDK — extracted JARs (direct .aar deps are forbidden in library modules)
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
