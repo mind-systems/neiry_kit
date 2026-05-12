@@ -25,7 +25,7 @@ class ActiveDeviceNotifier extends Notifier<Device?> {
     final existing = state;
     if (existing != null) {
       try {
-        await existing.stop();
+        if (existing.isStarted) await existing.stop();
       } catch (_) {}
       try {
         await existing.disconnect();
@@ -54,7 +54,7 @@ class ActiveDeviceNotifier extends Notifier<Device?> {
     // Clear state first so UI reflects idle immediately.
     state = null;
     try {
-      await device.stop();
+      if (device.isStarted) await device.stop();
     } catch (_) {}
     try {
       await device.disconnect();

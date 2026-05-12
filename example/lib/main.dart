@@ -39,7 +39,7 @@ class _NeiryExampleAppState extends State<NeiryExampleApp> {
     final device = _container.read(activeDeviceProvider);
     if (device != null) {
       try {
-        await device.stop();
+        if (device.isStarted) await device.stop();
       } catch (_) {}
       try {
         await device.disconnect();

@@ -74,6 +74,7 @@
     "57-fix-scan-spinner-not-showing-on-repeat-scan-review-1.md",
     "58-fix-psd-band-power-display-in-streams-tab-review-1.md",
     "59-fix-classifier-singleton-lifecycle-create-at-connect-not-at-start-review-1.md",
-    "60-add-permanent-action-logs-to-example-app-review-1.md"
+    "60-add-permanent-action-logs-to-example-app-review-1.md",
+    "61-fix-crash-on-disconnect-when-session-already-stopped-review-1.md"
   ]
 }
