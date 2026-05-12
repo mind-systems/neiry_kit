@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
@@ -51,6 +52,7 @@ class Device {
   NeiryDeviceMode? _mode;
   int? _battery;
   List<StreamSubscription<dynamic>>? _stateSubscriptions;
+  final Set<int> _loggedUnknownModeCodes = <int>{};
 
   // ── Cached streams ─────────────────────────────────────────────────────────
   // Initialised lazily so each receiveBroadcastStream is called at most once
@@ -62,10 +64,23 @@ class Device {
     (map) => NeiryConnectionState.fromCode(map['state'] as int),
   );
 
-  late final Stream<NeiryDeviceMode> _modeChangedStream = _eventStream(
-    const EventChannel(NeiryEvents.modeSwitched),
-    (map) => NeiryDeviceMode.fromCode(map['mode'] as int),
-  );
+  late final Stream<NeiryDeviceMode> _modeChangedStream = const EventChannel(
+    NeiryEvents.modeSwitched,
+  )
+      .receiveBroadcastStream({NeiryArgs.serial: serial})
+      .map<NeiryDeviceMode?>((raw) {
+        final code = (raw as Map<Object?, Object?>)['mode'] as int;
+        final mode = NeiryDeviceMode.fromCode(code);
+        if (mode == null && _loggedUnknownModeCodes.add(code)) {
+          log(
+            'Ignoring unknown NeiryDeviceMode code $code from native SDK',
+            name: 'neiry_kit',
+          );
+        }
+        return mode;
+      })
+      .where((mode) => mode != null)
+      .cast<NeiryDeviceMode>();
 
   late final Stream<EegData> _eegStream = _eventStream(
     const EventChannel(NeiryEvents.eeg),

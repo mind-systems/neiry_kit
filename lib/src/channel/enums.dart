@@ -54,14 +54,18 @@ enum NeiryDeviceMode {
   /// The integer value used by the C SDK for this device mode.
   final int code;
 
-  /// Returns the [NeiryDeviceMode] whose [code] equals [code].
+  /// Returns the [NeiryDeviceMode] whose [code] equals [code], or `null` for
+  /// unrecognised codes.
   ///
-  /// Throws [ArgumentError] when [code] does not correspond to any known mode.
-  static NeiryDeviceMode fromCode(int code) {
+  /// The Android AAR may emit undocumented internal `Device_Status` values
+  /// (e.g. `7`) that are not part of the public `clCDevice_Mode` enum (0–6).
+  /// These transient codes are silently ignored at this layer — callers receive
+  /// `null` and should skip the event rather than treating it as an error.
+  static NeiryDeviceMode? fromCode(int code) {
     for (final v in values) {
       if (v.code == code) return v;
     }
-    throw ArgumentError('Unknown NeiryDeviceMode code: $code');
+    return null;
   }
 }
 

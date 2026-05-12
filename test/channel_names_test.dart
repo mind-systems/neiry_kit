@@ -285,11 +285,16 @@ void main() {
   group('fromCode throws ArgumentError for unknown codes', () {
     test('NeiryDeviceType.fromCode(999)',
         () => expect(() => NeiryDeviceType.fromCode(999), throwsArgumentError));
-    test('NeiryDeviceMode.fromCode(999)',
-        () => expect(() => NeiryDeviceMode.fromCode(999), throwsArgumentError));
     test(
         'NeiryConnectionState.fromCode(999)',
         () => expect(
             () => NeiryConnectionState.fromCode(999), throwsArgumentError));
+  });
+
+  group('NeiryDeviceMode.fromCode returns null for unknown codes', () {
+    test('code 7 (undocumented Android Device_Status)',
+        () => expect(NeiryDeviceMode.fromCode(7), isNull));
+    test('code 999',
+        () => expect(NeiryDeviceMode.fromCode(999), isNull));
   });
 }
