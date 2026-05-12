@@ -30,19 +30,21 @@ import '../../models/physio_states.dart';
 ///
 /// ## Lifecycle
 ///
-/// The factory constructor verifies that EEG streaming is active on [device]
-/// before allocating the native handle. The native `create` call is fired
-/// asynchronously — accessing streams before native creation completes is safe;
-/// events will start flowing once the native side is ready.
+/// The factory constructor verifies that [device] is connected before
+/// allocating the native handle. The classifier lives for the full connection
+/// lifetime — from `Device.connect()` to `Device.disconnect()`. The native
+/// `create` call is fired asynchronously — accessing streams before native
+/// creation completes is safe; events will start flowing once the native side
+/// is ready.
 ///
 /// Call [dispose] when finished to release the native C handle.
 class PhysioClassifier {
   /// Creates a [PhysioClassifier] for the given [device].
   ///
-  /// Throws [StateError] when [device] has not been started yet.
+  /// Throws [StateError] when [device] has not been connected yet.
   factory PhysioClassifier(Device device) {
-    if (!device.isStarted) {
-      throw StateError('Cannot create PhysioClassifier before Device.start()');
+    if (!device.isConnected) {
+      throw StateError('Cannot create PhysioClassifier before Device.connect()');
     }
     return PhysioClassifier._(device.serial);
   }

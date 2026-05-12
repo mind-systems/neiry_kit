@@ -52,7 +52,7 @@ class ProductivityCardioScreen extends ConsumerWidget {
     final nfbData = ref.watch(nfbCalibrationProvider);
     final useCalibration = ref.watch(useCalibrationToggleProvider);
     final uiState = ref.watch(deviceUiStateProvider);
-    final canEditToggle = uiState != DeviceUiState.started;
+    final canEditToggle = uiState == DeviceUiState.idle;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Productivity & Cardio')),
@@ -70,7 +70,7 @@ class ProductivityCardioScreen extends ConsumerWidget {
                     )
                   : (!canEditToggle
                       ? const Text(
-                          'Stop streaming to change this setting',
+                          'Disconnect to change this setting',
                           style: TextStyle(color: Colors.grey),
                         )
                       : (useCalibration

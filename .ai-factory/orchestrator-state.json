@@ -72,6 +72,7 @@
     "55-handle-unknown-neirydevicemode-codes-from-android-sdk-review-1.md",
     "56-fix-module-already-exists-crash-when-toggling-use-nfb-calibration-review-1.md",
     "57-fix-scan-spinner-not-showing-on-repeat-scan-review-1.md",
-    "58-fix-psd-band-power-display-in-streams-tab-review-1.md"
+    "58-fix-psd-band-power-display-in-streams-tab-review-1.md",
+    "59-fix-classifier-singleton-lifecycle-create-at-connect-not-at-start-review-1.md"
   ]
 }

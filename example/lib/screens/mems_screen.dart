@@ -16,7 +16,7 @@ class MemsScreen extends ConsumerWidget {
     final useCalibration = ref.watch(useMemsCalibrationToggleProvider);
     final classifier = ref.watch(memsClassifierProvider);
     final uiState = ref.watch(deviceUiStateProvider);
-    final canEditToggle = uiState != DeviceUiState.started;
+    final canEditToggle = uiState == DeviceUiState.idle;
 
     return Scaffold(
       appBar: AppBar(title: const Text('MEMS')),
@@ -33,7 +33,7 @@ class MemsScreen extends ConsumerWidget {
                     )
                   : (!canEditToggle
                       ? const Text(
-                          'Stop streaming to change this setting',
+                          'Disconnect to change this setting',
                           style: TextStyle(color: Colors.grey),
                         )
                       : (useCalibration

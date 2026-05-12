@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:neiry_kit/neiry_kit.dart';
 
 import 'active_device_provider.dart';
-import 'device_state_providers.dart';
 
 /// Holds the last calibrated or imported [PhysiologicalStatesBaselines].
 ///
@@ -12,19 +11,17 @@ import 'device_state_providers.dart';
 final physioBaselinesProvider =
     StateProvider<PhysiologicalStatesBaselines?>((ref) => null);
 
-/// Creates and manages a [PhysioClassifier] gated on device connectivity and
-/// EEG streaming state.
+/// Creates and manages a [PhysioClassifier] gated on device connectivity.
 ///
-/// Returns `null` when no device is active or streaming has not been started.
-/// When the device or started-state changes, the old classifier is disposed and
-/// a new one is created automatically.
+/// Returns `null` when no device is active (disconnected). When the device
+/// disconnects, the old classifier is disposed and a new one is created on the
+/// next connection automatically.
 class PhysioClassifierNotifier extends Notifier<PhysioClassifier?> {
   @override
   PhysioClassifier? build() {
     final device = ref.watch(activeDeviceProvider);
-    final isStarted = ref.watch(deviceIsStartedProvider);
 
-    if (device == null || !isStarted) return null;
+    if (device == null) return null;
 
     final classifier = PhysioClassifier(device);
 

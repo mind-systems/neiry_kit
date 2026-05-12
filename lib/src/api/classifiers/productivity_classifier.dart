@@ -42,20 +42,22 @@ import '../../models/individual_nfb_data.dart';
 ///
 /// ## Lifecycle
 ///
-/// Both factory constructors verify that EEG streaming is active on [device]
-/// before allocating the native handle. The native `create` call is fired
-/// asynchronously — accessing streams before native creation completes is safe;
-/// events will start flowing once the native side is ready.
+/// Both factory constructors verify that [device] is connected before
+/// allocating the native handle. The classifier lives for the full connection
+/// lifetime — from `Device.connect()` to `Device.disconnect()`. The native
+/// `create` call is fired asynchronously — accessing streams before native
+/// creation completes is safe; events will start flowing once the native side
+/// is ready.
 ///
 /// Call [dispose] when finished to release the native C handle.
 class ProductivityClassifier {
   /// Creates a [ProductivityClassifier] for the given [device].
   ///
-  /// Throws [StateError] when [device] has not been started yet.
+  /// Throws [StateError] when [device] has not been connected yet.
   factory ProductivityClassifier(Device device) {
-    if (!device.isStarted) {
+    if (!device.isConnected) {
       throw StateError(
-        'Cannot create ProductivityClassifier before Device.start()',
+        'Cannot create ProductivityClassifier before Device.connect()',
       );
     }
     return ProductivityClassifier._(device.serial, calibration: null);
@@ -66,7 +68,7 @@ class ProductivityClassifier {
   /// Pass [nfbData] produced by [NfbCalibrator] to initialize the native
   /// classifier with per-user NFB parameters for improved accuracy.
   ///
-  /// Throws [StateError] when [device] has not been started yet.
+  /// Throws [StateError] when [device] has not been connected yet.
   ///
   /// On Android, throws [UnsupportedError] — the Android Capsule AAR does not
   /// export `clCProductivity_CreateWithIndividualData`. Use the plain
@@ -75,9 +77,9 @@ class ProductivityClassifier {
     Device device,
     IndividualNfbData nfbData,
   ) {
-    if (!device.isStarted) {
+    if (!device.isConnected) {
       throw StateError(
-        'Cannot create ProductivityClassifier before Device.start()',
+        'Cannot create ProductivityClassifier before Device.connect()',
       );
     }
     if (Platform.isAndroid) {

@@ -39,10 +39,16 @@ import '../../models/individual_nfb_data.dart';
 ///
 /// ## Lifecycle
 ///
-/// Both factory constructors verify that EEG streaming is active on [device]
-/// before allocating the native handle. The native `create` call is fired
-/// asynchronously — accessing streams before native creation completes is safe;
-/// events will start flowing once the native side is ready.
+/// Both factory constructors verify that [device] is connected before
+/// allocating the native handle. The classifier lives for the full connection
+/// lifetime — from `Device.connect()` to `Device.disconnect()`. The native
+/// `create` call is fired asynchronously — accessing streams before native
+/// creation completes is safe; events will start flowing once the native side
+/// is ready.
+///
+/// The calibration toggle is safe to flip only while disconnected. A
+/// newly-imported calibration takes effect on the next `Device.disconnect()` →
+/// `Device.connect()` cycle.
 ///
 /// Unlike other classifiers, the Cardio C API does not expose a
 /// `SetOnErrorEvent` callback. Errors surface as [PlatformException] thrown
@@ -52,11 +58,11 @@ import '../../models/individual_nfb_data.dart';
 class CardioClassifier {
   /// Creates a [CardioClassifier] for the given [device].
   ///
-  /// Throws [StateError] when [device] has not been started yet.
+  /// Throws [StateError] when [device] has not been connected yet.
   factory CardioClassifier(Device device) {
-    if (!device.isStarted) {
+    if (!device.isConnected) {
       throw StateError(
-        'Cannot create CardioClassifier before Device.start()',
+        'Cannot create CardioClassifier before Device.connect()',
       );
     }
     return CardioClassifier._(device.serial, calibration: null);
@@ -67,14 +73,14 @@ class CardioClassifier {
   /// Pass [nfbData] produced by [NfbCalibrator] to initialize the native
   /// classifier with per-user NFB parameters for improved accuracy.
   ///
-  /// Throws [StateError] when [device] has not been started yet.
+  /// Throws [StateError] when [device] has not been connected yet.
   factory CardioClassifier.withCalibration(
     Device device,
     IndividualNfbData nfbData,
   ) {
-    if (!device.isStarted) {
+    if (!device.isConnected) {
       throw StateError(
-        'Cannot create CardioClassifier before Device.start()',
+        'Cannot create CardioClassifier before Device.connect()',
       );
     }
     return CardioClassifier._(device.serial, calibration: nfbData);

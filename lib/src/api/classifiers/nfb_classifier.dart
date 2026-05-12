@@ -25,11 +25,13 @@ import '../../models/individual_nfb_data.dart';
 ///
 /// ## Lifecycle
 ///
-/// The factory constructor verifies that EEG streaming is active on [device]
-/// before allocating the native handle. The native `create` call is fired
-/// asynchronously — accessing [stateStream] or [errorStream] before native
-/// creation completes is safe; events will start flowing once the native side
-/// is ready (FIFO guarantee on the platform thread).
+/// The factory constructor verifies that [device] is connected before
+/// allocating the native handle. The classifier lives for the full connection
+/// lifetime — from `Device.connect()` to `Device.disconnect()`. The native
+/// `create` call is fired asynchronously — accessing [stateStream] or
+/// [errorStream] before native creation completes is safe; events will start
+/// flowing once the native side is ready (FIFO guarantee on the platform
+/// thread).
 ///
 /// Call [dispose] when finished to release the native C handle.
 class NfbClassifier {
@@ -38,10 +40,10 @@ class NfbClassifier {
   /// Pass [calibration] to initialize the classifier with individual NFB
   /// calibration data produced by [NfbCalibrator].
   ///
-  /// Throws [StateError] when [device] has not been started yet.
+  /// Throws [StateError] when [device] has not been connected yet.
   factory NfbClassifier(Device device, {IndividualNfbData? calibration}) {
-    if (!device.isStarted) {
-      throw StateError('Cannot create NfbClassifier before Device.start()');
+    if (!device.isConnected) {
+      throw StateError('Cannot create NfbClassifier before Device.connect()');
     }
     return NfbClassifier._(device.serial, calibration: calibration);
   }

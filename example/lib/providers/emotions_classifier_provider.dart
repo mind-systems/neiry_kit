@@ -2,21 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
 
 import 'active_device_provider.dart';
-import 'device_state_providers.dart';
 
-/// Creates and manages an [EmotionsClassifier] gated on device connectivity and
-/// EEG streaming state.
+/// Creates and manages an [EmotionsClassifier] gated on device connectivity.
 ///
-/// Returns `null` when no device is active or streaming has not been started.
-/// When the device or started-state changes, the old classifier is disposed and
-/// a new one is created automatically.
+/// Returns `null` when no device is active (disconnected). When the device
+/// disconnects, the old classifier is disposed and a new one is created on the
+/// next connection automatically.
 class EmotionsClassifierNotifier extends Notifier<EmotionsClassifier?> {
   @override
   EmotionsClassifier? build() {
     final device = ref.watch(activeDeviceProvider);
-    final isStarted = ref.watch(deviceIsStartedProvider);
 
-    if (device == null || !isStarted) return null;
+    if (device == null) return null;
 
     final classifier = EmotionsClassifier(device);
 
