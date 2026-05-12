@@ -277,8 +277,7 @@ class _CardioCard extends ConsumerWidget {
                     if (!data.metricsAvailable)
                       Opacity(
                         opacity: 0.5,
-                        child:
-                            const Text('Calibrating... metrics not yet available'),
+                        child: const Text('Calibrating... metrics not yet available'),
                       )
                     else ...[
                       _MetricRow('Heart Rate', data.heartRate, decimals: 1),
@@ -300,8 +299,7 @@ class _CardioCard extends ConsumerWidget {
                           ? 'PPG: ${ppg.values.last.toStringAsFixed(1)} @ '
                               '${_formatTime(DateTime.fromMillisecondsSinceEpoch(ppg.timestamps.last).toLocal())}'
                           : 'PPG: —',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ) ??
                   const Text(
