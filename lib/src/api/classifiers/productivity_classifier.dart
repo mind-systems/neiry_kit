@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
 
@@ -66,6 +67,10 @@ class ProductivityClassifier {
   /// classifier with per-user NFB parameters for improved accuracy.
   ///
   /// Throws [StateError] when [device] has not been started yet.
+  ///
+  /// On Android, throws [UnsupportedError] — the Android Capsule AAR does not
+  /// export `clCProductivity_CreateWithIndividualData`. Use the plain
+  /// [ProductivityClassifier] factory instead.
   factory ProductivityClassifier.withCalibration(
     Device device,
     IndividualNfbData nfbData,
@@ -73,6 +78,13 @@ class ProductivityClassifier {
     if (!device.isStarted) {
       throw StateError(
         'Cannot create ProductivityClassifier before Device.start()',
+      );
+    }
+    if (Platform.isAndroid) {
+      throw UnsupportedError(
+        'ProductivityClassifier.withCalibration is not supported on Android: '
+        'clCProductivity_CreateWithIndividualData is not exported by the Capsule AAR. '
+        'Use ProductivityClassifier(device) instead.',
       );
     }
     return ProductivityClassifier._(device.serial, calibration: nfbData);

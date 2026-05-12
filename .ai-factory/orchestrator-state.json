@@ -69,6 +69,7 @@
     "53-ble-runtime-permissions-on-scan-review-2.md",
     "53-ble-runtime-permissions-on-scan-review-3.md",
     "54-calibration-data-card-review-1.md",
-    "55-handle-unknown-neirydevicemode-codes-from-android-sdk-review-1.md"
+    "55-handle-unknown-neirydevicemode-codes-from-android-sdk-review-1.md",
+    "56-fix-module-already-exists-crash-when-toggling-use-nfb-calibration-review-1.md"
   ]
 }

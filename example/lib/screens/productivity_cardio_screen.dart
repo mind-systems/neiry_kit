@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/cardio_classifier_provider.dart';
+import '../providers/device_state_providers.dart';
 import '../providers/nfb_calibration_provider.dart';
 import '../providers/productivity_classifier_provider.dart';
 
@@ -50,6 +51,8 @@ class ProductivityCardioScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nfbData = ref.watch(nfbCalibrationProvider);
     final useCalibration = ref.watch(useCalibrationToggleProvider);
+    final uiState = ref.watch(deviceUiStateProvider);
+    final canEditToggle = uiState != DeviceUiState.started;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Productivity & Cardio')),
@@ -65,14 +68,19 @@ class ProductivityCardioScreen extends ConsumerWidget {
                       'Run calibration first to enable',
                       style: TextStyle(color: Colors.grey),
                     )
-                  : (useCalibration
+                  : (!canEditToggle
                       ? const Text(
-                          'Using individual NFB calibration',
+                          'Stop streaming to change this setting',
                           style: TextStyle(color: Colors.grey),
                         )
-                      : null),
+                      : (useCalibration
+                          ? const Text(
+                              'Using individual NFB calibration',
+                              style: TextStyle(color: Colors.grey),
+                            )
+                          : null)),
               value: useCalibration && nfbData != null,
-              onChanged: nfbData == null
+              onChanged: (nfbData == null || !canEditToggle)
                   ? null
                   : (val) {
                       ref.read(useCalibrationToggleProvider.notifier).state =

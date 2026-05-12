@@ -10,8 +10,15 @@ import 'productivity_classifier_provider.dart';
 /// EEG streaming state.
 ///
 /// Returns `null` when no device is active or streaming has not been started.
-/// Re-creates the classifier whenever the device, started-state, calibration
-/// toggle, or NFB calibration data changes.
+///
+/// The classifier is created when the device transitions to the started state
+/// and destroyed when it stops. The Capsule SDK has no per-classifier destroy
+/// function, so re-creating a classifier against an already-streaming device
+/// aborts the process on Android. The calibration toggle is therefore only safe
+/// to flip while the device is **not** started — the example screens enforce
+/// this by disabling the `Switch` during streaming. Calibration data is read
+/// once at build time; a newly-imported calibration takes effect on the next
+/// `Device.stop()` → `Device.start()` cycle.
 class CardioClassifierNotifier extends Notifier<CardioClassifier?> {
   @override
   CardioClassifier? build() {
@@ -20,7 +27,7 @@ class CardioClassifierNotifier extends Notifier<CardioClassifier?> {
 
     if (device == null || !isStarted) return null;
 
-    final nfbData = ref.watch(nfbCalibrationProvider);
+    final nfbData = ref.read(nfbCalibrationProvider);
     final useCalibration = ref.watch(useCalibrationToggleProvider);
 
     final CardioClassifier classifier;

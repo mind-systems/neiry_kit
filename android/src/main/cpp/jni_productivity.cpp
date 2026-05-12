@@ -67,50 +67,29 @@ Java_com_neiry_neiry_1kit_NativeBridge_nativeCreateProductivity(
     return (jlong)(uintptr_t)prod;
 }
 
+// TODO(neiry-aar): restore _CreateWithIndividualData path when the AAR exports it.
 JNIEXPORT jlong JNICALL
 Java_com_neiry_neiry_1kit_NativeBridge_nativeCreateProductivityWithIndividualData(
     JNIEnv* env, jobject,
-    jlong  deviceHandle,
-    jlong  ts,
-    jint   failReason,
-    jfloat individualFrequency,
-    jfloat individualPeakFrequency,
-    jfloat individualPeakFrequencyPower,
-    jfloat individualPeakFrequencySuppression,
-    jfloat individualBandwidth,
-    jfloat individualNormalizedPower,
-    jfloat lowerFrequency,
-    jfloat upperFrequency)
+    [[maybe_unused]] jlong  deviceHandle,
+    [[maybe_unused]] jlong  ts,
+    [[maybe_unused]] jint   failReason,
+    [[maybe_unused]] jfloat individualFrequency,
+    [[maybe_unused]] jfloat individualPeakFrequency,
+    [[maybe_unused]] jfloat individualPeakFrequencyPower,
+    [[maybe_unused]] jfloat individualPeakFrequencySuppression,
+    [[maybe_unused]] jfloat individualBandwidth,
+    [[maybe_unused]] jfloat individualNormalizedPower,
+    [[maybe_unused]] jfloat lowerFrequency,
+    [[maybe_unused]] jfloat upperFrequency)
 {
-    clCDevice dev = (clCDevice)(uintptr_t)deviceHandle;
-
-    clCIndividualNFBData data = {};
-    data.timestampMilli                     = (int64_t)ts;
-    data.failReason                         = (clCIndividualNFBCalibrationFailReason)failReason;
-    data.individualFrequency                = (float)individualFrequency;
-    data.individualPeakFrequency            = (float)individualPeakFrequency;
-    data.individualPeakFrequencyPower       = (float)individualPeakFrequencyPower;
-    data.individualPeakFrequencySuppression = (float)individualPeakFrequencySuppression;
-    data.individualBandwidth                = (float)individualBandwidth;
-    data.individualNormalizedPower          = (float)individualNormalizedPower;
-    data.lowerFrequency                     = (float)lowerFrequency;
-    data.upperFrequency                     = (float)upperFrequency;
-
-    clCError error = {};
-    // Android SDK does not have clCProductivity_CreateWithIndividualData; fall back to Create
-    clCProductivity prod = clCProductivity_Create(dev, &error);
-    if (!error.success) {
-        throw_sdk_error(env, &error);
-        return 0;
-    }
-
-    clCProductivity_SetOnMetricsUpdateEvent(prod, on_productivity_metrics_update);
-    clCProductivity_SetOnIndexesUpdateEvent(prod, on_productivity_indexes_update);
-    clCProductivity_SetOnBaselineUpdateEvent(prod, on_productivity_baseline_update);
-    clCProductivity_SetOnCalibrationProgressUpdateEvent(prod, on_productivity_calibration_progress);
-    clCProductivity_SetOnIndividualNFBUpdateEvent(prod, on_productivity_individual_nfb_update);
-
-    return (jlong)(uintptr_t)prod;
+    clCError error{};
+    error.success = false;
+    error.code = clCError_ModuleIsNotSupported;
+    snprintf(error.message, sizeof(error.message),
+             "clCProductivity_CreateWithIndividualData is not exported by the Android Capsule AAR");
+    throw_sdk_error(env, &error);
+    return 0;
 }
 
 JNIEXPORT void JNICALL

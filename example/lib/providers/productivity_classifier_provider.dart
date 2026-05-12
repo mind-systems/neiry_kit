@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:neiry_kit/neiry_kit.dart';
@@ -18,8 +19,20 @@ final useCalibrationToggleProvider = StateProvider<bool>((ref) => false);
 /// and EEG streaming state.
 ///
 /// Returns `null` when no device is active or streaming has not been started.
-/// Re-creates the classifier whenever the device, started-state, calibration
-/// toggle, or NFB calibration data changes.
+///
+/// The classifier is created when the device transitions to the started state
+/// and destroyed when it stops. The Capsule SDK has no per-classifier destroy
+/// function, so re-creating a classifier against an already-streaming device
+/// aborts the process on Android. The calibration toggle is therefore only safe
+/// to flip while the device is **not** started — the example screens enforce
+/// this by disabling the `Switch` during streaming. Calibration data is read
+/// once at build time; a newly-imported calibration takes effect on the next
+/// `Device.stop()` → `Device.start()` cycle.
+///
+/// On Android, individual-NFB Productivity calibration is not available
+/// (`clCProductivity_CreateWithIndividualData` is not exported by the Capsule
+/// AAR). The calibration toggle still gates the [CardioClassifier], which does
+/// support calibration on Android.
 class ProductivityClassifierNotifier extends Notifier<ProductivityClassifier?> {
   @override
   ProductivityClassifier? build() {
@@ -28,12 +41,21 @@ class ProductivityClassifierNotifier extends Notifier<ProductivityClassifier?> {
 
     if (device == null || !isStarted) return null;
 
-    final nfbData = ref.watch(nfbCalibrationProvider);
+    final nfbData = ref.read(nfbCalibrationProvider);
     final useCalibration = ref.watch(useCalibrationToggleProvider);
 
     final ProductivityClassifier classifier;
     if (useCalibration && nfbData != null) {
-      classifier = ProductivityClassifier.withCalibration(device, nfbData);
+      ProductivityClassifier? calibrated;
+      try {
+        calibrated = ProductivityClassifier.withCalibration(device, nfbData);
+      } on UnsupportedError {
+        debugPrint(
+          'ProductivityClassifier.withCalibration unsupported on this platform; '
+          'falling back to plain factory',
+        );
+      }
+      classifier = calibrated ?? ProductivityClassifier(device);
     } else {
       classifier = ProductivityClassifier(device);
     }
