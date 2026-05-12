@@ -76,11 +76,13 @@ class _EegCard extends ConsumerWidget {
 // ── PSD ──────────────────────────────────────────────────────────────────────
 
 double _bandPower(PsdData psd, double lower, double upper) {
+  final lo = lower <= upper ? lower : upper;
+  final hi = lower <= upper ? upper : lower;
   double sum = 0;
   int count = 0;
   for (var fi = 0; fi < psd.frequencyCount; fi++) {
     final f = psd.frequencies[fi];
-    if (f >= lower && f <= upper) {
+    if (f >= lo && f <= hi) {
       for (var ch = 0; ch < psd.channelCount; ch++) {
         sum += psd.values[ch][fi];
       }
@@ -111,19 +113,19 @@ class _PsdCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Delta: ${_bandPower(psd, psd.deltaLower, psd.deltaUpper).toStringAsFixed(3)}',
+                    'Delta: ${_bandPower(psd, psd.deltaLower, psd.deltaUpper).toStringAsExponential(2)}',
                   ),
                   Text(
-                    'Theta: ${_bandPower(psd, psd.thetaLower, psd.thetaUpper).toStringAsFixed(3)}',
+                    'Theta: ${_bandPower(psd, psd.thetaLower, psd.thetaUpper).toStringAsExponential(2)}',
                   ),
                   Text(
-                    'Alpha: ${_bandPower(psd, psd.alphaLower, psd.alphaUpper).toStringAsFixed(3)}',
+                    'Alpha: ${_bandPower(psd, psd.alphaLower, psd.alphaUpper).toStringAsExponential(2)}',
                   ),
                   Text(
-                    'SMR: ${_bandPower(psd, psd.smrLower, psd.smrUpper).toStringAsFixed(3)}',
+                    'SMR: ${_bandPower(psd, psd.smrLower, psd.smrUpper).toStringAsExponential(2)}',
                   ),
                   Text(
-                    'Beta: ${_bandPower(psd, psd.betaLower, psd.betaUpper).toStringAsFixed(3)}',
+                    'Beta: ${_bandPower(psd, psd.betaLower, psd.betaUpper).toStringAsExponential(2)}',
                   ),
                 ],
               ),
