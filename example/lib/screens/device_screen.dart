@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
@@ -81,6 +82,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   // ── Scan ──────────────────────────────────────────────────────────────────
 
   Future<void> _scan() async {
+    log('Scan tapped', name: 'Neiry');
     if (!await _checkAndRequestPermissions()) return;
     if (!mounted) return;
     final params = (_selectedType, _searchTime);
@@ -94,6 +96,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   // ── Device actions ────────────────────────────────────────────────────────
 
   Future<void> _connect() async {
+    log('Connect tapped: $_selectedSerial', name: 'Neiry');
     final serial = _selectedSerial;
     if (serial == null) return;
     // Reset started flag before connecting — prevents stale `started` state
@@ -109,6 +112,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   }
 
   Future<void> _start() async {
+    log('Start tapped', name: 'Neiry');
     final device = ref.read(activeDeviceProvider);
     if (device == null) return;
     try {
@@ -122,6 +126,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   }
 
   Future<void> _stop() async {
+    log('Stop tapped', name: 'Neiry');
     final device = ref.read(activeDeviceProvider);
     if (device == null) return;
     try {
@@ -135,6 +140,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   }
 
   Future<void> _disconnect() async {
+    log('Disconnect tapped', name: 'Neiry');
     try {
       await ref.read(activeDeviceProvider.notifier).disconnectAndDispose();
       ref.read(deviceIsStartedProvider.notifier).state = false;
@@ -269,7 +275,10 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
                   title: Text(d.name),
                   subtitle: Text(d.serial),
                   selected: _selectedSerial == d.serial,
-                  onTap: () => setState(() => _selectedSerial = d.serial),
+                  onTap: () {
+                    log('Device selected: ${d.serial}', name: 'Neiry');
+                    setState(() => _selectedSerial = d.serial);
+                  },
                 ),
               )
               .toList(),

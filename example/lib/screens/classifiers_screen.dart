@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -151,9 +153,12 @@ class _PhysioCard extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => ref
-                      .read(physioClassifierProvider.notifier)
-                      .startBaselineCalibration(),
+                  onPressed: () {
+                    log('Physio: Start Baseline Calibration tapped', name: 'Neiry');
+                    ref
+                        .read(physioClassifierProvider.notifier)
+                        .startBaselineCalibration();
+                  },
                   child: const Text('Start Baseline Calibration'),
                 ),
               ),
@@ -162,6 +167,7 @@ class _PhysioCard extends ConsumerWidget {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () async {
+                    log('Physio: Import Baselines tapped', name: 'Neiry');
                     final messenger = ScaffoldMessenger.of(context);
                     final result =
                         await PhysioBaselinesFileManager.importFromFile();
@@ -184,6 +190,7 @@ class _PhysioCard extends ConsumerWidget {
                   onPressed: baselines == null
                       ? null
                       : () async {
+                          log('Physio: Export Baselines tapped', name: 'Neiry');
                           final messenger = ScaffoldMessenger.of(context);
                           final file = await PhysioBaselinesFileManager
                               .exportToFile(baselines);

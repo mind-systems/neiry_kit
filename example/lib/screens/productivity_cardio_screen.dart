@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -83,6 +85,7 @@ class ProductivityCardioScreen extends ConsumerWidget {
               onChanged: (nfbData == null || !canEditToggle)
                   ? null
                   : (val) {
+                      log('Productivity: Use NFB Calibration toggled: $val', name: 'Neiry');
                       ref.read(useCalibrationToggleProvider.notifier).state =
                           val;
                     },
@@ -211,9 +214,12 @@ class _ProductivityCard extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => ref
-                      .read(productivityClassifierProvider.notifier)
-                      .startBaselineCalibration(),
+                  onPressed: () {
+                    log('Productivity: Start Baseline Calibration tapped', name: 'Neiry');
+                    ref
+                        .read(productivityClassifierProvider.notifier)
+                        .startBaselineCalibration();
+                  },
                   child: const Text('Start Baseline Calibration'),
                 ),
               ),
@@ -221,9 +227,12 @@ class _ProductivityCard extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () => ref
-                      .read(productivityClassifierProvider.notifier)
-                      .resetAccumulatedFatigue(),
+                  onPressed: () {
+                    log('Productivity: Reset Fatigue tapped', name: 'Neiry');
+                    ref
+                        .read(productivityClassifierProvider.notifier)
+                        .resetAccumulatedFatigue();
+                  },
                   child: const Text('Reset Fatigue'),
                 ),
               ),

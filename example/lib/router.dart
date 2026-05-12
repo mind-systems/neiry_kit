@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -49,13 +51,19 @@ class _RootScaffold extends StatelessWidget {
 
   const _RootScaffold({required this.navigationShell});
 
+  static String _tabName(int i) =>
+      const ['Device', 'Streams', 'Classifiers', 'Productivity', 'MEMS', 'Calibration'][i];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: navigationShell.goBranch,
+        onDestinationSelected: (int index) {
+          log('Tab → ${_tabName(index)}', name: 'Neiry');
+          navigationShell.goBranch(index);
+        },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.devices), label: 'Device'),
           NavigationDestination(

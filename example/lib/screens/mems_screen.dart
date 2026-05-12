@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -46,6 +48,7 @@ class MemsScreen extends ConsumerWidget {
               onChanged: (nfbData == null || !canEditToggle)
                   ? null
                   : (val) {
+                      log('MEMS: Use NFB Calibration toggled: $val', name: 'Neiry');
                       ref
                           .read(useMemsCalibrationToggleProvider.notifier)
                           .state = val;

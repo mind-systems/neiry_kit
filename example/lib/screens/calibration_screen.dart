@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
@@ -100,20 +102,26 @@ class _IdleContent extends ConsumerWidget {
         Text(uiState.instruction),
         const SizedBox(height: 12),
         ElevatedButton(
-          onPressed: () =>
-              ref.read(calibrationProvider.notifier).startFull(),
+          onPressed: () {
+            log('Calibration: Start Full tapped', name: 'Neiry');
+            ref.read(calibrationProvider.notifier).startFull();
+          },
           child: const Text('Start Full Calibration'),
         ),
         const SizedBox(height: 8),
         ElevatedButton(
-          onPressed: () =>
-              ref.read(calibrationProvider.notifier).startQuick(),
+          onPressed: () {
+            log('Calibration: Start Quick tapped', name: 'Neiry');
+            ref.read(calibrationProvider.notifier).startQuick();
+          },
           child: const Text('Start Quick Calibration'),
         ),
         const SizedBox(height: 8),
         OutlinedButton(
-          onPressed: () =>
-              ref.read(calibrationProvider.notifier).importFromFile(),
+          onPressed: () {
+            log('Calibration: Import tapped', name: 'Neiry');
+            ref.read(calibrationProvider.notifier).importFromFile();
+          },
           child: const Text('Import from File'),
         ),
       ],
@@ -145,8 +153,10 @@ class _ActiveContent extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         OutlinedButton(
-          onPressed: () =>
-              ref.read(calibrationProvider.notifier).abort(),
+          onPressed: () {
+            log('Calibration: Abort tapped', name: 'Neiry');
+            ref.read(calibrationProvider.notifier).abort();
+          },
           child: const Text('Abort'),
         ),
       ],
@@ -179,6 +189,7 @@ class _DoneContent extends ConsumerWidget {
         const SizedBox(height: 12),
         ElevatedButton(
           onPressed: () async {
+            log('Calibration: Export tapped', name: 'Neiry');
             final messenger = ScaffoldMessenger.of(context);
             final file =
                 await ref.read(calibrationProvider.notifier).exportToFile();
@@ -192,8 +203,10 @@ class _DoneContent extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         OutlinedButton(
-          onPressed: () =>
-              ref.read(calibrationProvider.notifier).startFull(),
+          onPressed: () {
+            log('Calibration: Recalibrate tapped', name: 'Neiry');
+            ref.read(calibrationProvider.notifier).startFull();
+          },
           child: const Text('Recalibrate'),
         ),
       ],
@@ -218,7 +231,10 @@ class _ErrorContent extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         ElevatedButton(
-          onPressed: () => ref.invalidate(calibrationProvider),
+          onPressed: () {
+            log('Calibration: Retry tapped', name: 'Neiry');
+            ref.invalidate(calibrationProvider);
+          },
           child: const Text('Retry'),
         ),
       ],
