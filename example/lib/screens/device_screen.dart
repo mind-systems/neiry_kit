@@ -236,6 +236,13 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
 
     final scanAsync = ref.watch(deviceScanProvider(params));
 
+    if (scanAsync.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return scanAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
