@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
 
-import 'device_locator_provider.dart';
+import 'neiry_service_provider.dart';
 
 /// One-shot scan provider.
 ///
@@ -12,10 +12,8 @@ import 'device_locator_provider.dart';
 final deviceScanProvider =
     FutureProvider.family<List<DeviceInfo>, (NeiryDeviceType, int)>(
   (ref, params) {
-    final locator = ref.watch(deviceLocatorProvider);
+    final service = ref.read(neiryServiceProvider);
     final (type, searchTime) = params;
-    return locator
-        .requestDevices(type: type, searchTime: searchTime)
-        .first;
+    return service.scan(type: type, searchTime: searchTime).first;
   },
 );

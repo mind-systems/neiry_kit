@@ -2,26 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:neiry_kit/neiry_kit.dart';
 
-import 'active_device_provider.dart';
+import 'neiry_service_provider.dart';
 
-/// Emits [NeiryDeviceMode] whenever the active device changes its operating mode.
-///
-/// Emits nothing ([Stream.empty]) when no device is active.
-final deviceModeProvider = StreamProvider<NeiryDeviceMode>((ref) {
-  final device = ref.watch(activeDeviceProvider);
-  if (device == null) return const Stream.empty();
-  return device.modeChangedStream;
-});
-
-/// Emits the current BLE connection state of the active device.
-///
-/// Falls back to [NeiryConnectionState.disconnected] when no device is active.
+/// Emits the current BLE connection state sourced from [NeiryService].
 final deviceConnectionStateProvider = StreamProvider<NeiryConnectionState>(
-  (ref) {
-    final device = ref.watch(activeDeviceProvider);
-    if (device == null) return Stream.value(NeiryConnectionState.disconnected);
-    return device.connectionStateStream;
-  },
+  (ref) => ref.watch(neiryServiceProvider).connectionStateStream,
+);
+
+/// Emits [NeiryDeviceMode] whenever the device changes its operating mode.
+final deviceModeProvider = StreamProvider<NeiryDeviceMode>(
+  (ref) => ref.watch(neiryServiceProvider).modeStream,
 );
 
 /// Whether EEG streaming is currently active on the connected device.

@@ -50,6 +50,7 @@ class NeiryService {
   final _modeController = StreamController<NeiryDeviceMode>.broadcast();
   final _eegController = StreamController<EegData>.broadcast();
   final _psdController = StreamController<PsdData>.broadcast();
+  final _artifactsController = StreamController<EegArtifactData>.broadcast();
   final _resistanceController = StreamController<ResistanceData>.broadcast();
   final _batteryController = StreamController<int>.broadcast();
   final _physioController =
@@ -158,6 +159,10 @@ class NeiryService {
         _device!.psdStream.listen(
           _psdController.add,
           onError: _psdController.addError,
+        ),
+        _device!.artifactsStream.listen(
+          _artifactsController.add,
+          onError: _artifactsController.addError,
         ),
         _device!.resistanceStream.listen(
           _resistanceController.add,
@@ -289,6 +294,7 @@ class NeiryService {
     await _psdController.close();
     await _resistanceController.close();
     await _batteryController.close();
+    await _artifactsController.close();
     await _physioController.close();
     await _emotionsController.close();
     await _cardioController.close();
@@ -312,6 +318,9 @@ class NeiryService {
 
   /// Emits power spectral density frames.
   Stream<PsdData> get psdStream => _psdController.stream;
+
+  /// Emits EEG artifact data events.
+  Stream<EegArtifactData> get artifactsStream => _artifactsController.stream;
 
   /// Emits electrode resistance readings.
   Stream<ResistanceData> get resistanceStream => _resistanceController.stream;
