@@ -63,6 +63,11 @@ class NeiryService {
       StreamController<ProductivityIndexes>.broadcast();
   final _productivityMetricsController =
       StreamController<ProductivityMetrics>.broadcast();
+  final _cardioPpgController = StreamController<PpgData>.broadcast();
+  final _physioCalibrationProgressController =
+      StreamController<double>.broadcast();
+  final _productivityCalibrationProgressController =
+      StreamController<double>.broadcast();
 
   // ── Guards ─────────────────────────────────────────────────────────────────
 
@@ -184,6 +189,10 @@ class NeiryService {
           _cardioController.add,
           onError: _cardioController.addError,
         ),
+        _cardio!.ppgStream.listen(
+          _cardioPpgController.add,
+          onError: _cardioPpgController.addError,
+        ),
         _mems!.memsStream.listen(
           _memsController.add,
           onError: _memsController.addError,
@@ -199,6 +208,14 @@ class NeiryService {
         _productivity!.metricsStream.listen(
           _productivityMetricsController.add,
           onError: _productivityMetricsController.addError,
+        ),
+        _physio!.calibrationProgress.listen(
+          _physioCalibrationProgressController.add,
+          onError: _physioCalibrationProgressController.addError,
+        ),
+        _productivity!.calibrationProgress.listen(
+          _productivityCalibrationProgressController.add,
+          onError: _productivityCalibrationProgressController.addError,
         ),
       ]);
     } finally {
@@ -302,6 +319,9 @@ class NeiryService {
     await _nfbController.close();
     await _productivityIndexesController.close();
     await _productivityMetricsController.close();
+    await _cardioPpgController.close();
+    await _physioCalibrationProgressController.close();
+    await _productivityCalibrationProgressController.close();
   }
 
   // ── Data streams ───────────────────────────────────────────────────────────
@@ -351,6 +371,17 @@ class NeiryService {
   /// Emits [ProductivityMetrics] from the productivity classifier.
   Stream<ProductivityMetrics> get productivityMetricsStream =>
       _productivityMetricsController.stream;
+
+  /// Emits PPG sample batches from the [CardioClassifier].
+  Stream<PpgData> get cardioPpgStream => _cardioPpgController.stream;
+
+  /// Emits Physio baseline-calibration progress (0.0–1.0).
+  Stream<double> get physioCalibrationProgressStream =>
+      _physioCalibrationProgressController.stream;
+
+  /// Emits Productivity baseline-calibration progress (0.0–1.0).
+  Stream<double> get productivityCalibrationProgressStream =>
+      _productivityCalibrationProgressController.stream;
 
   // ── Classifier accessors ───────────────────────────────────────────────────
 
