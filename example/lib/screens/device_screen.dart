@@ -7,8 +7,10 @@ import 'package:neiry_kit/neiry_kit.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/active_device_provider.dart';
+import '../providers/calibration_provider.dart';
 import '../providers/device_scan_provider.dart';
 import '../providers/device_state_providers.dart';
+import '../providers/sound_service_provider.dart';
 
 class DeviceScreen extends ConsumerStatefulWidget {
   const DeviceScreen({super.key});
@@ -164,6 +166,12 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   Widget build(BuildContext context) {
     final uiState = ref.watch(deviceUiStateProvider);
     final connectionAsync = ref.watch(deviceConnectionStateProvider);
+
+    ref.listen<AsyncValue<NeiryDeviceMode>>(deviceModeProvider, (prev, next) {
+      if (prev is! AsyncData<NeiryDeviceMode>) return; // suppress first emission after (re)subscribe
+      if (ref.read(calibrationProvider).isLoading) return; // calibration owns audio
+      next.whenData((_) => ref.read(soundServiceProvider).playModeChange());
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Device')),

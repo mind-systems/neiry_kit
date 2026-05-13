@@ -20,6 +20,21 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
   /// Guards [startFull] from overwriting the state that [abort] already set.
   bool _aborted = false;
 
+  /// `true` while [abort] is driving the `loading → error → data` state
+  /// sequence. Listeners should skip cues when this is `true`.
+  bool get isAborting => _aborted;
+
+  /// `true` from the moment [startFull] or [startQuick] is called until the
+  /// terminal state assignment completes (including error). Cleared synchronously
+  /// on the line after `state = await AsyncValue.guard(...)`, which fires after
+  /// any Riverpod listeners have already observed the transition. [importFromFile]
+  /// and the cold-open [build] path intentionally do not set this flag so their
+  /// `loading → data` transitions are silent.
+  bool _running = false;
+
+  /// Whether a user-initiated calibration run is currently in progress.
+  bool get isRunning => _running;
+
   @override
   Future<IndividualNfbData?> build() async {
     ref.onDispose(() {
@@ -33,6 +48,7 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
 
   Future<void> startFull() async {
     _aborted = false;
+    _running = true;
     await WakelockPlus.enable();
     state = const AsyncValue.loading();
     _fullCompleter = Completer<IndividualNfbData>();
@@ -69,6 +85,7 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
         await WakelockPlus.disable();
       }
     });
+    _running = false;
 
     if (_aborted) return; // abort() already wrote the correct state
     _writeToSharedProvider();
@@ -77,6 +94,7 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
   // ── Quick single-stage calibration ─────────────────────────────────────────
 
   Future<void> startQuick() async {
+    _running = true;
     await WakelockPlus.enable();
     state = const AsyncValue.loading();
 
@@ -87,6 +105,7 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
         await WakelockPlus.disable();
       }
     });
+    _running = false;
 
     _writeToSharedProvider();
   }
@@ -104,6 +123,9 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
     ref.read(calibrationTimerProvider.notifier).stop();
     await WakelockPlus.disable();
     state = AsyncValue.data(await NfbCalibrator.getCalibrationData());
+    // Clear the flag after all state assignments so that ref.listen callbacks
+    // observing those transitions still see isAborting == true.
+    Future.microtask(() => _aborted = false);
   }
 
   // ── File I/O ────────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import '../providers/calibration_provider.dart';
 import '../providers/calibration_timer_provider.dart';
 import '../providers/calibration_ui_state.dart';
 import '../providers/nfb_classifier_provider.dart';
+import '../providers/sound_service_provider.dart';
 
 /// Shows the NFB calibration pipeline and live NFB band-power readout.
 class CalibrationScreen extends ConsumerWidget {
@@ -40,6 +41,25 @@ class _CalibrationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(calibrationTimerProvider, (prev, next) {
+      if (ref.read(calibrationProvider.notifier).isAborting) return;
+      if (next.stage != null && next.stage != prev?.stage) {
+        ref.read(soundServiceProvider).playStageStart();
+      }
+    });
+
+    ref.listen<AsyncValue<IndividualNfbData?>>(calibrationProvider, (prev, next) {
+      final notifier = ref.read(calibrationProvider.notifier);
+      if (!notifier.isRunning) return; // skip cold-open, import, and Retry rebuilds
+      if (notifier.isAborting) return; // abort()'s loading→error→data transitions
+      final sound = ref.read(soundServiceProvider);
+      if (!prev!.hasValue && next.hasValue && next.value != null) {
+        sound.playDone();
+      } else if (!prev.hasError && next.hasError) {
+        sound.playError();
+      }
+    });
+
     final calibAsync = ref.watch(calibrationProvider);
     final timerState = ref.watch(calibrationTimerProvider);
 
