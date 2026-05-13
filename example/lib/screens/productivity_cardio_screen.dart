@@ -2,11 +2,12 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neiry_kit/neiry_kit.dart';
 
-import '../providers/cardio_classifier_provider.dart';
+import '../providers/classifier_stream_providers.dart';
 import '../providers/device_state_providers.dart';
 import '../providers/nfb_calibration_provider.dart';
-import '../providers/productivity_classifier_provider.dart';
+import '../providers/productivity_actions_provider.dart';
 
 // ── Enum label tables ──────────────────────────────────────────────────────
 
@@ -53,8 +54,6 @@ class ProductivityCardioScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nfbData = ref.watch(nfbCalibrationProvider);
     final useCalibration = ref.watch(useCalibrationToggleProvider);
-    final uiState = ref.watch(deviceUiStateProvider);
-    final canEditToggle = uiState == DeviceUiState.idle;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Productivity & Cardio')),
@@ -70,19 +69,12 @@ class ProductivityCardioScreen extends ConsumerWidget {
                       'Run calibration first to enable',
                       style: TextStyle(color: Colors.grey),
                     )
-                  : (!canEditToggle
-                      ? const Text(
-                          'Disconnect to change this setting',
-                          style: TextStyle(color: Colors.grey),
-                        )
-                      : (useCalibration
-                          ? const Text(
-                              'Using individual NFB calibration',
-                              style: TextStyle(color: Colors.grey),
-                            )
-                          : null)),
+                  : const Text(
+                      'Takes effect on next connect',
+                      style: TextStyle(color: Colors.grey),
+                    ),
               value: useCalibration && nfbData != null,
-              onChanged: (nfbData == null || !canEditToggle)
+              onChanged: nfbData == null
                   ? null
                   : (val) {
                       log('Productivity: Use NFB Calibration toggled: $val', name: 'Neiry');
@@ -108,7 +100,8 @@ class _ProductivityCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classifier = ref.watch(productivityClassifierProvider);
+    final isConnected = ref.watch(deviceConnectionStateProvider).asData?.value ==
+        NeiryConnectionState.connected;
 
     return Card(
       child: Padding(
@@ -121,122 +114,126 @@ class _ProductivityCard extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            if (classifier == null)
-              const Text('Waiting for device...')
-            else ...[
-              // ── Indexes ───────────────────────────────────────────────────
-              ref.watch(productivityIndexesProvider).when(
-                loading: () => const Text('Waiting for indexes data...'),
-                error: (e, _) => Text('Error: $e'),
-                data: (indexes) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Indexes',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    _LabelRow(
-                      'Recommendation',
-                      _labelFor(_recommendationLabels, indexes.relaxation),
-                    ),
-                    _LabelRow(
-                      'Stress',
-                      _labelFor(_stressLabels, indexes.stress),
-                    ),
-                    _SignalQualityRow('Artifacts', indexes.hasArtifacts),
-                  ],
-                ),
-              ),
-              const Divider(),
-              // ── Metrics ───────────────────────────────────────────────────
-              ref.watch(productivityMetricsProvider).when(
-                loading: () => const Text('Waiting for metrics data...'),
-                error: (e, _) => Text('Error: $e'),
-                data: (metrics) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Metrics',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    _MetricRow('Fatigue Score', metrics.fatigueScore),
-                    _MetricRow(
-                        'Rev. Fatigue Score', metrics.reverseFatigueScore),
-                    _MetricRow('Gravity Score', metrics.gravityScore),
-                    _MetricRow('Relaxation Score', metrics.relaxationScore),
-                    _MetricRow(
-                        'Concentration Score', metrics.concentrationScore),
-                    _MetricRow('Productivity Score', metrics.productivityScore),
-                    _MetricRow('Current Value', metrics.currentValue),
-                    _MetricRow('Alpha', metrics.alpha),
-                    _MetricRow(
-                        'Productivity Baseline', metrics.productivityBaseline),
-                    _MetricRow(
-                        'Accumulated Fatigue', metrics.accumulatedFatigue),
-                    _LabelRow(
-                      'Fatigue Growth Rate',
-                      _labelFor(_fatigueGrowthLabels, metrics.fatigueGrowthRate),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: [
-                          const SizedBox(
-                            width: 140,
-                            child: Text('Artifacts Data'),
-                          ),
-                          Text(
-                            metrics.artifactsData != null
-                                ? 'Artifacts: ${metrics.artifactsData!.length} bytes'
-                                : 'Artifacts: none',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Calibration progress bar — visible only while calibration runs.
-              ref.watch(productivityCalibrationProgressProvider).whenOrNull(
-                    data: (progress) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+            // ── Indexes ───────────────────────────────────────────────────
+            !isConnected
+                ? const Text('Waiting for device...')
+                : ref.watch(productivityIndexesProvider).when(
+                    loading: () => const Text('Waiting for indexes data...'),
+                    error: (e, _) => Text('Error: $e'),
+                    data: (indexes) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        LinearProgressIndicator(value: progress),
-                        const SizedBox(height: 8),
+                        const Text(
+                          'Indexes',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 4),
+                        _LabelRow(
+                          'Recommendation',
+                          _labelFor(_recommendationLabels, indexes.relaxation),
+                        ),
+                        _LabelRow(
+                          'Stress',
+                          _labelFor(_stressLabels, indexes.stress),
+                        ),
+                        _SignalQualityRow('Artifacts', indexes.hasArtifacts),
                       ],
                     ),
-                  ) ??
-                  const SizedBox.shrink(),
-              // Action buttons
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    log('Productivity: Start Baseline Calibration tapped', name: 'Neiry');
-                    ref
-                        .read(productivityClassifierProvider.notifier)
-                        .startBaselineCalibration();
-                  },
-                  child: const Text('Start Baseline Calibration'),
-                ),
+                  ),
+            const Divider(),
+            // ── Metrics ───────────────────────────────────────────────────
+            !isConnected
+                ? const Text('Waiting for device...')
+                : ref.watch(productivityMetricsProvider).when(
+                    loading: () => const Text('Waiting for metrics data...'),
+                    error: (e, _) => Text('Error: $e'),
+                    data: (metrics) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Metrics',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 4),
+                        _MetricRow('Fatigue Score', metrics.fatigueScore),
+                        _MetricRow(
+                            'Rev. Fatigue Score', metrics.reverseFatigueScore),
+                        _MetricRow('Gravity Score', metrics.gravityScore),
+                        _MetricRow('Relaxation Score', metrics.relaxationScore),
+                        _MetricRow(
+                            'Concentration Score', metrics.concentrationScore),
+                        _MetricRow('Productivity Score', metrics.productivityScore),
+                        _MetricRow('Current Value', metrics.currentValue),
+                        _MetricRow('Alpha', metrics.alpha),
+                        _MetricRow(
+                            'Productivity Baseline', metrics.productivityBaseline),
+                        _MetricRow(
+                            'Accumulated Fatigue', metrics.accumulatedFatigue),
+                        _LabelRow(
+                          'Fatigue Growth Rate',
+                          _labelFor(_fatigueGrowthLabels, metrics.fatigueGrowthRate),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                width: 140,
+                                child: Text('Artifacts Data'),
+                              ),
+                              Text(
+                                metrics.artifactsData != null
+                                    ? 'Artifacts: ${metrics.artifactsData!.length} bytes'
+                                    : 'Artifacts: none',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+            const SizedBox(height: 12),
+            // Calibration progress bar — visible only while calibration runs.
+            ref.watch(productivityCalibrationProgressProvider).whenOrNull(
+                  data: (progress) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      LinearProgressIndicator(value: progress),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ) ??
+                const SizedBox.shrink(),
+            // Action buttons
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isConnected
+                    ? () {
+                        log('Productivity: Start Baseline Calibration tapped', name: 'Neiry');
+                        ref
+                            .read(productivityActionsProvider.notifier)
+                            .startBaselineCalibration();
+                      }
+                    : null,
+                child: const Text('Start Baseline Calibration'),
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () {
-                    log('Productivity: Reset Fatigue tapped', name: 'Neiry');
-                    ref
-                        .read(productivityClassifierProvider.notifier)
-                        .resetAccumulatedFatigue();
-                  },
-                  child: const Text('Reset Fatigue'),
-                ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: isConnected
+                    ? () {
+                        log('Productivity: Reset Fatigue tapped', name: 'Neiry');
+                        ref
+                            .read(productivityActionsProvider.notifier)
+                            .resetAccumulatedFatigue();
+                      }
+                    : null,
+                child: const Text('Reset Fatigue'),
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -251,7 +248,8 @@ class _CardioCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classifier = ref.watch(cardioClassifierProvider);
+    final isConnected = ref.watch(deviceConnectionStateProvider).asData?.value ==
+        NeiryConnectionState.connected;
 
     // Show a SnackBar when Cardio internal calibration completes.
     ref.listen(cardioCalibratedProvider, (_, next) {
@@ -273,49 +271,47 @@ class _CardioCard extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            if (classifier == null)
-              const Text('Waiting for device...')
-            else ...[
-              // ── Cardio state ──────────────────────────────────────────────
-              ref.watch(cardioStateProvider).when(
-                loading: () => const Text('Waiting for Cardio data...'),
-                error: (e, _) => Text('Error: $e'),
-                data: (data) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (!data.metricsAvailable)
-                      Opacity(
-                        opacity: 0.5,
-                        child: const Text('Calibrating... metrics not yet available'),
-                      )
-                    else ...[
-                      _MetricRow('Heart Rate', data.heartRate, decimals: 1),
-                      _MetricRow('Stress Index', data.stressIndex),
-                      _MetricRow('Kaplan Index', data.kaplanIndex),
-                    ],
-                    const Divider(),
-                    _SignalQualityRow('Artifacts', data.hasArtifacts),
-                    _SignalQualityRow('Skin Contact', !data.skinContact),
-                    _SignalQualityRow('Motion', data.motionArtifacts),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              // ── PPG last value ────────────────────────────────────────────
-              ref.watch(cardioPpgProvider).whenOrNull(
-                    data: (ppg) => Text(
-                      ppg.values.isNotEmpty
-                          ? 'PPG: ${ppg.values.last.toStringAsFixed(1)} @ '
-                              '${_formatTime(DateTime.fromMillisecondsSinceEpoch(ppg.timestamps.last).toLocal())}'
-                          : 'PPG: —',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+            // ── Cardio state ──────────────────────────────────────────────
+            !isConnected
+                ? const Text('Waiting for device...')
+                : ref.watch(cardioStateProvider).when(
+                    loading: () => const Text('Waiting for device...'),
+                    error: (e, _) => Text('Error: $e'),
+                    data: (data) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!data.metricsAvailable)
+                          Opacity(
+                            opacity: 0.5,
+                            child: const Text('Calibrating... metrics not yet available'),
+                          )
+                        else ...[
+                          _MetricRow('Heart Rate', data.heartRate, decimals: 1),
+                          _MetricRow('Stress Index', data.stressIndex),
+                          _MetricRow('Kaplan Index', data.kaplanIndex),
+                        ],
+                        const Divider(),
+                        _SignalQualityRow('Artifacts', data.hasArtifacts),
+                        _SignalQualityRow('Skin Contact', !data.skinContact),
+                        _SignalQualityRow('Motion', data.motionArtifacts),
+                      ],
                     ),
-                  ) ??
-                  const Text(
-                    'PPG: —',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-            ],
+            const SizedBox(height: 8),
+            // ── PPG last value ────────────────────────────────────────────
+            ref.watch(cardioPpgProvider).whenOrNull(
+                  data: (ppg) => Text(
+                    ppg.values.isNotEmpty
+                        ? 'PPG: ${ppg.values.last.toStringAsFixed(1)} @ '
+                            '${_formatTime(DateTime.fromMillisecondsSinceEpoch(ppg.timestamps.last).toLocal())}'
+                        : 'PPG: —',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ) ??
+                const Text(
+                  'PPG: —',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
           ],
         ),
       ),

@@ -58,6 +58,16 @@ final productivityCalibrationProgressProvider = StreamProvider<double>((ref) {
   return ref.watch(neiryServiceProvider).productivityCalibrationProgressStream;
 });
 
+/// Emits [PhysiologicalStatesBaselines] once when physio baseline calibration
+/// completes.
+final physioCalibratedProvider =
+    StreamProvider<PhysiologicalStatesBaselines>((ref) =>
+        ref.watch(neiryServiceProvider).physioCalibratedStream);
+
+/// Emits once when the Cardio classifier's internal calibration completes.
+final cardioCalibratedProvider = StreamProvider<DateTime>(
+    (ref) => ref.watch(neiryServiceProvider).cardioCalibratedStream);
+
 /// Holds the last calibrated or imported [PhysiologicalStatesBaselines].
 ///
 /// Written by `PhysioActionsNotifier` in the next milestone; consumed by the

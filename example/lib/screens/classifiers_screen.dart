@@ -2,10 +2,12 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neiry_kit/neiry_kit.dart';
 
-import '../providers/emotions_classifier_provider.dart';
+import '../providers/classifier_stream_providers.dart';
+import '../providers/device_state_providers.dart';
+import '../providers/physio_actions_provider.dart';
 import '../providers/physio_baselines_file_manager.dart';
-import '../providers/physio_classifier_provider.dart';
 
 /// Shows the Emotions and Physiological States classifier readouts.
 class ClassifiersScreen extends ConsumerWidget {
@@ -36,7 +38,9 @@ class _EmotionsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classifier = ref.watch(emotionsClassifierProvider);
+    final isConnected = ref.watch(deviceConnectionStateProvider).asData?.value ==
+        NeiryConnectionState.connected;
+    final emotionsAsync = ref.watch(emotionsStateProvider);
 
     return Card(
       child: Padding(
@@ -49,23 +53,22 @@ class _EmotionsCard extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            if (classifier == null)
-              const Text('Waiting for device...')
-            else
-              ref.watch(emotionsStateProvider).when(
-                loading: () => const Text('Waiting for Emotions data...'),
-                error: (e, _) => Text('Error: $e'),
-                data: (state) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _MetricRow('Attention', state.attention),
-                    _MetricRow('Relaxation', state.relaxation),
-                    _MetricRow('Cognitive Load', state.cognitiveLoad),
-                    _MetricRow('Cognitive Control', state.cognitiveControl),
-                    _MetricRow('Self-Control', state.selfControl),
-                  ],
-                ),
-              ),
+            !isConnected
+                ? const Text('Waiting for device...')
+                : emotionsAsync.when(
+                    loading: () => const Text('Waiting for device...'),
+                    error: (e, _) => Text('Error: $e'),
+                    data: (state) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _MetricRow('Attention', state.attention),
+                        _MetricRow('Relaxation', state.relaxation),
+                        _MetricRow('Cognitive Load', state.cognitiveLoad),
+                        _MetricRow('Cognitive Control', state.cognitiveControl),
+                        _MetricRow('Self-Control', state.selfControl),
+                      ],
+                    ),
+                  ),
           ],
         ),
       ),
@@ -80,7 +83,9 @@ class _PhysioCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classifier = ref.watch(physioClassifierProvider);
+    final isConnected = ref.watch(deviceConnectionStateProvider).asData?.value ==
+        NeiryConnectionState.connected;
+    final physioAsync = ref.watch(physioStateProvider);
     final baselines = ref.watch(physioBaselinesProvider);
 
     // Show a SnackBar when baseline calibration completes.
@@ -103,105 +108,104 @@ class _PhysioCard extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            if (classifier == null)
-              const Text('Waiting for device...')
-            else ...[
-              ref.watch(physioStateProvider).when(
-                loading: () => Opacity(
-                  opacity: 0.5,
-                  child: const Text('Waiting for first update...'),
-                ),
-                error: (e, _) => Text('Error: $e'),
-                data: (state) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _MetricRow('Relaxation', state.relaxation),
-                    _MetricRow('Fatigue', state.fatigue),
-                    _MetricRow('Concentration', state.concentration),
-                    _MetricRow('Involvement', state.involvement),
-                    _MetricRow('Stress', state.stress),
-                    const Divider(),
-                    const Text(
-                      'Signal Quality',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    _SignalQualityRow('NFB', state.nfbArtifacts),
-                    _SignalQualityRow('Cardio', state.cardioArtifacts),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Last updated: ${_formatTime(state.timestamp)}',
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Calibration progress bar — visible only while calibration runs.
-              ref.watch(physioCalibrationProgressProvider).whenOrNull(
-                    data: (progress) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+            !isConnected
+                ? const Text('Waiting for device...')
+                : physioAsync.when(
+                    loading: () => const Text('Waiting for device...'),
+                    error: (e, _) => Text('Error: $e'),
+                    data: (state) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        LinearProgressIndicator(value: progress),
+                        _MetricRow('Relaxation', state.relaxation),
+                        _MetricRow('Fatigue', state.fatigue),
+                        _MetricRow('Concentration', state.concentration),
+                        _MetricRow('Involvement', state.involvement),
+                        _MetricRow('Stress', state.stress),
+                        const Divider(),
+                        const Text(
+                          'Signal Quality',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 4),
+                        _SignalQualityRow('NFB', state.nfbArtifacts),
+                        _SignalQualityRow('Cardio', state.cardioArtifacts),
                         const SizedBox(height: 8),
+                        Text(
+                          'Last updated: ${_formatTime(state.timestamp)}',
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey),
+                        ),
                       ],
                     ),
-                  ) ??
-                  const SizedBox.shrink(),
-              // Action buttons
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    log('Physio: Start Baseline Calibration tapped', name: 'Neiry');
-                    ref
-                        .read(physioClassifierProvider.notifier)
-                        .startBaselineCalibration();
-                  },
-                  child: const Text('Start Baseline Calibration'),
-                ),
+                  ),
+            const SizedBox(height: 12),
+            // Calibration progress bar — visible only while calibration runs.
+            ref.watch(physioCalibrationProgressProvider).whenOrNull(
+                  data: (progress) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      LinearProgressIndicator(value: progress),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ) ??
+                const SizedBox.shrink(),
+            // Action buttons
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isConnected
+                    ? () {
+                        log('Physio: Start Baseline Calibration tapped', name: 'Neiry');
+                        ref
+                            .read(physioActionsProvider.notifier)
+                            .startBaselineCalibration();
+                      }
+                    : null,
+                child: const Text('Start Baseline Calibration'),
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    log('Physio: Import Baselines tapped', name: 'Neiry');
-                    final messenger = ScaffoldMessenger.of(context);
-                    final result =
-                        await PhysioBaselinesFileManager.importFromFile();
-                    if (result != null) {
-                      await ref
-                          .read(physioClassifierProvider.notifier)
-                          .importBaselines(result);
-                      messenger.showSnackBar(
-                        const SnackBar(content: Text('Baselines imported')),
-                      );
-                    }
-                  },
-                  child: const Text('Import Baselines'),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: baselines == null
-                      ? null
-                      : () async {
-                          log('Physio: Export Baselines tapped', name: 'Neiry');
-                          final messenger = ScaffoldMessenger.of(context);
-                          final file = await PhysioBaselinesFileManager
-                              .exportToFile(baselines);
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: isConnected
+                    ? () async {
+                        log('Physio: Import Baselines tapped', name: 'Neiry');
+                        final messenger = ScaffoldMessenger.of(context);
+                        final result =
+                            await PhysioBaselinesFileManager.importFromFile();
+                        if (result != null) {
+                          await ref
+                              .read(physioActionsProvider.notifier)
+                              .importBaselines(result);
                           messenger.showSnackBar(
-                            SnackBar(content: Text('Saved to ${file.path}')),
+                            const SnackBar(content: Text('Baselines imported')),
                           );
-                        },
-                  child: const Text('Export Baselines'),
-                ),
+                        }
+                      }
+                    : null,
+                child: const Text('Import Baselines'),
               ),
-            ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: baselines == null
+                    ? null
+                    : () async {
+                        log('Physio: Export Baselines tapped', name: 'Neiry');
+                        final messenger = ScaffoldMessenger.of(context);
+                        final file = await PhysioBaselinesFileManager
+                            .exportToFile(baselines);
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('Saved to ${file.path}')),
+                        );
+                      },
+                child: const Text('Export Baselines'),
+              ),
+            ),
           ],
         ),
       ),

@@ -68,6 +68,9 @@ class NeiryService {
       StreamController<double>.broadcast();
   final _productivityCalibrationProgressController =
       StreamController<double>.broadcast();
+  final _physioCalibratedController =
+      StreamController<PhysiologicalStatesBaselines>.broadcast();
+  final _cardioCalibratedController = StreamController<DateTime>.broadcast();
 
   // ── Guards ─────────────────────────────────────────────────────────────────
 
@@ -217,6 +220,14 @@ class NeiryService {
           _productivityCalibrationProgressController.add,
           onError: _productivityCalibrationProgressController.addError,
         ),
+        _physio!.calibrated.listen(
+          _physioCalibratedController.add,
+          onError: _physioCalibratedController.addError,
+        ),
+        _cardio!.calibratedStream.listen(
+          (_) => _cardioCalibratedController.add(DateTime.now()),
+          onError: _cardioCalibratedController.addError,
+        ),
       ]);
     } finally {
       _connecting = false;
@@ -231,6 +242,13 @@ class NeiryService {
   /// the next [connect] call can re-feed them.
   Future<void> disconnect() async {
     if (_device == null) return;
+
+    // Synthesize a disconnected event so stream consumers (e.g. deviceConnectionStateProvider)
+    // revert their state before the fan-in subscription is torn down and the native
+    // SDK's own disconnect event can no longer reach the multiplexer.
+    if (!_connectionStateController.isClosed) {
+      _connectionStateController.add(NeiryConnectionState.disconnected);
+    }
 
     // 1. Cancel fan-in subscriptions.
     for (final s in _activeSubscriptions) {
@@ -322,6 +340,8 @@ class NeiryService {
     await _cardioPpgController.close();
     await _physioCalibrationProgressController.close();
     await _productivityCalibrationProgressController.close();
+    await _physioCalibratedController.close();
+    await _cardioCalibratedController.close();
   }
 
   // ── Data streams ───────────────────────────────────────────────────────────
@@ -382,6 +402,15 @@ class NeiryService {
   /// Emits Productivity baseline-calibration progress (0.0–1.0).
   Stream<double> get productivityCalibrationProgressStream =>
       _productivityCalibrationProgressController.stream;
+
+  /// Emits [PhysiologicalStatesBaselines] once when physio baseline calibration
+  /// completes.
+  Stream<PhysiologicalStatesBaselines> get physioCalibratedStream =>
+      _physioCalibratedController.stream;
+
+  /// Emits once when the Cardio classifier's internal calibration completes.
+  Stream<DateTime> get cardioCalibratedStream =>
+      _cardioCalibratedController.stream;
 
   // ── Classifier accessors ───────────────────────────────────────────────────
 
