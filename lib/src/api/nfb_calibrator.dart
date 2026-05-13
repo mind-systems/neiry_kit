@@ -35,6 +35,17 @@ import '../models/individual_nfb_data.dart';
 /// final ready = await NfbCalibrator.isCalibrated();
 /// ```
 abstract final class NfbCalibrator {
+  /// Const constructor so const subclasses (e.g. [_NfbCalibratorHandle]) can
+  /// invoke a const super. Abstract classes may declare const constructors —
+  /// direct instantiation is still prevented by `abstract`.
+  const NfbCalibrator();
+
+  /// Sentinel value stored by [NeiryService] while a device is connected.
+  ///
+  /// Used only as a non-null presence indicator — none of the static methods
+  /// need an instance, so no behaviour is attached to this sentinel.
+  static const NfbCalibrator handle = _NfbCalibratorHandle();
+
   static const _channel = MethodChannel(NeiryChannels.nfbCalibrator);
   static const _calibrationEventChannel =
       EventChannel(NeiryEvents.nfbCalibration);
@@ -285,4 +296,11 @@ abstract final class NfbCalibrator {
     );
     return result ?? false;
   }
+}
+
+/// Private concrete subclass used only to materialise [NfbCalibrator.handle].
+///
+/// No behaviour — exists solely so `const NfbCalibrator.handle` compiles.
+final class _NfbCalibratorHandle extends NfbCalibrator {
+  const _NfbCalibratorHandle();
 }
