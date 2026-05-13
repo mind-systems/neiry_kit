@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'providers/active_device_provider.dart';
+import 'providers/neiry_service_provider.dart';
 import 'router.dart';
 
 void main() {
@@ -32,22 +32,13 @@ class _NeiryExampleAppState extends State<NeiryExampleApp> {
 
   /// Stops and disconnects the active device before tearing down the container.
   ///
-  /// DeviceLocator disposal is intentionally omitted here — `ref.onDispose` in
-  /// `device_locator_provider.dart` handles it when `_container.dispose()` runs,
-  /// and calling `DeviceLocator.dispose()` twice throws `StateError`.
+  /// [NeiryService.dispose] is idempotent — `ref.onDispose` in
+  /// `neiry_service_provider.dart` will also fire when `_container.dispose()`
+  /// runs, but the second call returns immediately on `_disposed = true`.
   Future<void> _cleanupAndDispose() async {
-    final device = _container.read(activeDeviceProvider);
-    if (device != null) {
-      try {
-        if (device.isStarted) await device.stop();
-      } catch (_) {}
-      try {
-        await device.disconnect();
-      } catch (_) {}
-      try {
-        await device.dispose();
-      } catch (_) {}
-    }
+    try {
+      await _container.read(neiryServiceProvider).dispose();
+    } catch (_) {}
     _container.dispose();
   }
 

@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../providers/active_device_provider.dart';
+import '../providers/neiry_service_provider.dart';
 import '../providers/calibration_provider.dart';
 import '../providers/device_scan_provider.dart';
 import '../providers/device_state_providers.dart';
@@ -105,9 +105,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     // if the user reconnects after an unexpected disconnect mid-stream.
     ref.read(deviceIsStartedProvider.notifier).state = false;
     try {
-      await ref
-          .read(activeDeviceProvider.notifier)
-          .createAndConnect(serial);
+      await ref.read(neiryServiceProvider).connect(serial);
     } catch (e) {
       _showError(e is NeiryException ? e.message : e.toString());
     }
@@ -115,10 +113,8 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
 
   Future<void> _start() async {
     log('Start tapped', name: 'Neiry');
-    final device = ref.read(activeDeviceProvider);
-    if (device == null) return;
     try {
-      await device.start();
+      await ref.read(neiryServiceProvider).start();
       ref.read(deviceIsStartedProvider.notifier).state = true;
     } on NeiryException catch (e) {
       _showError(e.message);
@@ -129,10 +125,8 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
 
   Future<void> _stop() async {
     log('Stop tapped', name: 'Neiry');
-    final device = ref.read(activeDeviceProvider);
-    if (device == null) return;
     try {
-      await device.stop();
+      await ref.read(neiryServiceProvider).stop();
       ref.read(deviceIsStartedProvider.notifier).state = false;
     } on NeiryException catch (e) {
       _showError(e.message);
@@ -144,7 +138,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   Future<void> _disconnect() async {
     log('Disconnect tapped', name: 'Neiry');
     try {
-      await ref.read(activeDeviceProvider.notifier).disconnectAndDispose();
+      await ref.read(neiryServiceProvider).disconnect();
       ref.read(deviceIsStartedProvider.notifier).state = false;
     } on NeiryException catch (e) {
       _showError(e.message);
