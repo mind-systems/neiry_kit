@@ -25,9 +25,10 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
   bool get isAborting => _aborted;
 
   /// `true` from the moment [startFull] or [startQuick] is called until the
-  /// terminal state assignment completes (including error). Cleared synchronously
-  /// on the line after `state = await AsyncValue.guard(...)`, which fires after
-  /// any Riverpod listeners have already observed the transition. [importFromFile]
+  /// terminal state assignment completes (including error). Cleared on a
+  /// microtask after `state = await AsyncValue.guard(...)` so that `ref.listen`
+  /// callbacks observing the `loading → data` / `loading → error` transitions
+  /// still see `isRunning == true` and can fire audio cues. [importFromFile]
   /// and the cold-open [build] path intentionally do not set this flag so their
   /// `loading → data` transitions are silent.
   bool _running = false;
@@ -85,7 +86,7 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
         await WakelockPlus.disable();
       }
     });
-    _running = false;
+    Future.microtask(() => _running = false);
 
     if (_aborted) return; // abort() already wrote the correct state
     _writeToSharedProvider();
@@ -105,7 +106,7 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
         await WakelockPlus.disable();
       }
     });
-    _running = false;
+    Future.microtask(() => _running = false);
 
     _writeToSharedProvider();
   }

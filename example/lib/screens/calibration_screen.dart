@@ -36,11 +36,16 @@ class CalibrationScreen extends ConsumerWidget {
 
 // ── Calibration card ──────────────────────────────────────────────────────────
 
-class _CalibrationCard extends ConsumerWidget {
+class _CalibrationCard extends ConsumerStatefulWidget {
   const _CalibrationCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CalibrationCard> createState() => _CalibrationCardState();
+}
+
+class _CalibrationCardState extends ConsumerState<_CalibrationCard> {
+  @override
+  Widget build(BuildContext context) {
     ref.listen(calibrationTimerProvider, (prev, next) {
       if (ref.read(calibrationProvider.notifier).isAborting) return;
       if (next.stage != null && next.stage != prev?.stage) {
