@@ -7,7 +7,7 @@ import 'package:neiry_kit/neiry_kit.dart';
 import '../providers/calibration_provider.dart';
 import '../providers/calibration_timer_provider.dart';
 import '../providers/calibration_ui_state.dart';
-import '../providers/nfb_classifier_provider.dart';
+import '../providers/classifier_stream_providers.dart';
 import '../providers/sound_service_provider.dart';
 
 /// Shows the NFB calibration pipeline and live NFB band-power readout.
@@ -274,8 +274,6 @@ class _NfbCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classifier = ref.watch(nfbClassifierProvider);
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -287,23 +285,20 @@ class _NfbCard extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            if (classifier == null)
-              const Text('Waiting for device...')
-            else
-              ref.watch(nfbStateProvider).when(
-                loading: () => const Text('Waiting for NFB data...'),
-                error: (e, _) => Text('Error: $e'),
-                data: (state) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _BandRow('Delta', state.delta),
-                    _BandRow('Theta', state.theta),
-                    _BandRow('Alpha', state.alpha),
-                    _BandRow('SMR', state.smr),
-                    _BandRow('Beta', state.beta),
-                  ],
-                ),
+            ref.watch(nfbStateProvider).when(
+              loading: () => const Text('Waiting for device...'),
+              error: (e, _) => Text('Error: $e'),
+              data: (state) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _BandRow('Delta', state.delta),
+                  _BandRow('Theta', state.theta),
+                  _BandRow('Alpha', state.alpha),
+                  _BandRow('SMR', state.smr),
+                  _BandRow('Beta', state.beta),
+                ],
               ),
+            ),
           ],
         ),
       ),
