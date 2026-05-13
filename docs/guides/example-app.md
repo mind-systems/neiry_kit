@@ -2,19 +2,50 @@
 
 Example app в `example/` — основной инструмент верификации плагина на реальном железе. Прежде чем `mind_mobile` начнёт использовать какой-либо API, он должен быть проверен через example app.
 
-## Структура
+## Архитектура
 
-Приложение разбито на пять вкладок, каждая из которых покрывает отдельный слой API:
+Приложение разделено на три слоя с чёткими границами ответственности.
 
-**Device** — поиск и подключение. Кнопка «Сканировать» запускает `requestDevices`, результат показывается списком с серийным номером и типом. Tap на устройство создаёт `Device` и сохраняет его в провайдере. Экран показывает живой статус подключения, текущий режим и заряд батареи. Кнопки Connect / Start / Stop / Disconnect активируются в зависимости от текущего состояния.
+**`NeiryService`** (`example/lib/services/neiry_service.dart`) — единственный владелец логики устройства. Чистый Dart-класс без зависимостей на Flutter или Riverpod. Управляет `DeviceLocator`, `Device` и всеми шестью классификаторами. При вызове `connect()` немедленно создаёт все классификаторы — они живут до `disconnect()` и не пересоздаются при `start()`/`stop()`. Публикует данные как broadcast-стримы (`eegStream`, `cardioStream`, `memsStream` и т.д.).
 
-**Streams** — сырые данные. Показывает в реальном времени последний пакет с каждого стрима: значения по каналам из `eegStream`, полосы из `psdStream`, флаги из `artifactsStream`, значения по каналам из `resistanceStream`. Если устройство не подключено, каждая карточка показывает заглушку «нет устройства».
+**Riverpod-провайдеры** (`example/lib/providers/`) — тонкий мост между сервисом и UI. `neiryServiceProvider` держит синглтон `NeiryService`. Каждый поток данных обёрнут в `StreamProvider` с throttle там, где нужно для плавности. `PhysioActionsNotifier` и `ProductivityActionsNotifier` экспонируют команды (`startBaselineCalibration`, `resetAccumulatedFatigue`) и делегируют к классификаторам через сервис. `CalibrationNotifier` управляет NFB-калибровкой через `NfbCalibrator`.
 
-**NFB + Calibration** — калибровка и NFB классификатор. Верхняя часть экрана — управление калибровкой: кнопка полной калибровки с отображением текущей стадии и прошедшего времени, кнопка quick mode, импорт и экспорт `IndividualNfbData` через файловый picker. Нижняя часть — живые значения delta/theta/alpha/smr/beta из `NfbClassifier`.
+**Экраны** (`example/lib/screens/`) — чистый UI. Каждый экран работает только через `ref.watch` / `ref.read` на провайдерах, ничего не знает о `NeiryService` напрямую.
 
-**Physio + Emotions** — два классификатора на одном экране. Для физиологических состояний: кнопка запуска калибровки, прогресс-бар, импорт базовых линий, живые значения раз в 2 минуты. Для эмоций: живые значения без калибровки.
+```
+NeiryService
+  ├── scan() / connect(serial, nfbData?) / start() / stop() / disconnect()
+  ├── eegStream, psdStream, resistanceStream, batteryStream
+  ├── physioStream, emotionsStream, cardioStream
+  ├── memsStream, nfbStream
+  ├── productivityIndexesStream, productivityMetricsStream
+  └── calibrator → NfbCalibrator
 
-**Productivity + Cardio** — продуктивность и кардио. Для продуктивности: переключатель между созданием с калибровкой и без, управление базовой калибровкой, кнопка сброса накопленной усталости, все три потока данных. Для кардио: ЧСС, индексы, последнее значение PPG.
+Riverpod providers
+  ├── neiryServiceProvider (singleton, app lifetime)
+  ├── deviceConnectionStateProvider, deviceModeProvider, deviceUiStateProvider
+  ├── eegProvider (100ms), psdProvider (500ms), memsProvider (100ms), ...
+  ├── physioActionsProvider, productivityActionsProvider
+  └── calibrationProvider (AsyncNotifier)
+
+Screens → ref.watch / ref.read → providers → NeiryService
+```
+
+## Вкладки
+
+Приложение использует `StatefulShellRoute.indexedStack` — все вкладки остаются смонтированными после первого открытия, стримы не прерываются при переключении.
+
+**Device** — поиск и подключение. Сканирование вызывает `neiryService.scan()`. После выбора устройства `connect(serial, nfbData: savedCalibration)` создаёт все классификаторы сразу. Кнопки Start / Stop / Disconnect управляют `neiryService.start()` / `stop()` / `disconnect()`.
+
+**Streams** — сырые данные: EEG по каналам, PSD-полосы, сопротивление электродов, уровень заряда, флаги артефактов.
+
+**Classifiers** — физиологические состояния и эмоции. Значения из `physioStateProvider` и `emotionsStateProvider`. Кнопки калибровки физио делегируют к `physioActionsProvider.notifier`.
+
+**Productivity + Cardio** — продуктивность и кардио. Переключатель «Использовать NFB-калибровку» сохраняет предпочтение и применяется при следующем подключении (SDK не позволяет пересоздавать классификаторы на ходу). Команды через `productivityActionsProvider.notifier`.
+
+**MEMS** — акселерометр и гироскоп, throttle 100 мс. Переключатель NFB-калибровки аналогичен продуктивности.
+
+**Calibration** — NFB-калибровка. Полная (4 стадии × 20 с) или быстрая (30 с). Импорт/экспорт `IndividualNfbData` через файловый picker. Живые значения NFB-ритмов во время и после калибровки.
 
 ## Запуск
 
@@ -25,10 +56,26 @@ flutter run
 
 Для работы нужна реальная нейрогарнитура Neiry — симуляторы (`SinWave`, `Noise`) позволяют проверить поток данных, но классификаторы на синтетических данных не дают осмысленных результатов.
 
-При первом запуске iOS запросит разрешение на Bluetooth. Без него поиск устройств всегда возвращает пустой список.
+При первом запуске iOS запросит разрешение на Bluetooth. На Android runtime-разрешения запрашиваются перед сканированием.
 
 ## Роль в разработке плагина
 
-Каждый новый API в плагине должен появиться в example app раньше, чем он будет использован в `mind_mobile`. Это позволяет проверить интеграцию на конкретном железе и убедиться, что нативные мосты работают корректно — и только после этого делать API доступным для потребителей.
+Каждый новый API в плагине должен появиться в example app раньше, чем он будет использован в `mind_mobile`. Экраны используют только публичный Dart API плагина — никаких `import 'package:neiry_kit/src/...'`.
 
-Провайдеры в `example/lib/providers/` используют Riverpod и напрямую зависят только от публичного Dart API плагина — никаких `import 'package:neiry_kit/src/...'`. Это намеренное ограничение: example app демонстрирует ровно ту поверхность, которую видит `mind_mobile`.
+## Интеграция в mind_mobile
+
+`NeiryService` спроектирован для переноса в `mind_mobile` как долгоживущий сервис уровня приложения:
+
+```dart
+// lib/Core/App.dart
+class App {
+  final NeiryService neiryService;
+
+  static Future<void> initialize() async {
+    shared = App._(neiryService: NeiryService());
+    runApp(ProviderScope(...));
+  }
+}
+```
+
+Экран настройки BCI подключает устройство и проводит калибровку — после закрытия `NeiryService` продолжает жить в `App.shared`. Данные текут в фоновый сервис, который пакует и отправляет их на сервер. Ни один экран не владеет жизненным циклом устройства.

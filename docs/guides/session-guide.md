@@ -71,7 +71,28 @@ await device.start();
 
 После `start()` устройство переходит в режим `Signal` и начинает слать данные.
 
-## 6. NFB-калибровка (при необходимости)
+## 6. Создать классификаторы
+
+Классификаторы создаются сразу после `connect()` — до `start()`. SDK допускает только один экземпляр каждого классификатора на устройство, и для него нет явного Destroy. Поэтому создавай классификаторы один раз при подключении и держи их до отключения.
+
+```dart
+// Создаётся после connect(), до start()
+final nfb = NfbClassifier(device, calibration: savedCalibration);
+final physio = PhysioClassifier(device);
+final emotions = EmotionsClassifier(device);
+// ... остальные классификаторы
+
+// Подписывайся на стримы тоже до start()
+nfb.stateStream.listen((state) {
+  print('alpha: ${state.alpha?.toStringAsFixed(2)}');
+});
+```
+
+Если передать сохранённые данные `IndividualNfbData` — результаты NFB, продуктивности и кардио будут точнее.
+
+Поля `delta` и `smr` возвращают `null` без калибровки — они зависят от индивидуального альфа-профиля.
+
+## 7. NFB-калибровка (при необходимости)
 
 Калибровка нужна один раз — результат сохраняется между сессиями. Если у пользователя уже есть сохранённые данные, пропусти этот шаг.
 
@@ -84,25 +105,11 @@ final calibration = await NfbCalibrator.calibrateIndividual().last
 
 if (calibration != null) {
   // сохранить calibration.toMap() в хранилище
+  // при следующем запуске передать в connect() или конструктор классификатора
 }
 ```
 
 Полная калибровка занимает ~80 секунд (4 стадии по 20 секунд). Пользователь должен сидеть неподвижно, следовать инструкции по открытию/закрытию глаз.
-
-## 7. Создать классификатор
-
-Классификатор создаётся после `start()`. Если передать данные калибровки — результаты будут точнее.
-
-```dart
-final nfb = NfbClassifier(device, calibration: calibration);
-
-nfb.stateStream.listen((state) {
-  print('alpha: ${state.alpha?.toStringAsFixed(2)}');
-  print('beta:  ${state.beta?.toStringAsFixed(2)}');
-});
-```
-
-Поля `delta` и `smr` возвращают `null` без калибровки — они зависят от индивидуального альфа-профиля пользователя.
 
 ## 8. Завершить сессию
 
@@ -120,6 +127,8 @@ await locator.dispose();
 | Что не так | Что произойдёт |
 |---|---|
 | `createDevice` до `connect` | Устройство создано, но `start()` бросит `DeviceNotConnectedException` |
-| Классификатор до `start()` | `StateError` — явный guard в Dart API |
+| Классификатор до `connect()` | `StateError` — явный guard в Dart API |
+| Создание классификатора дважды | `Fatal signal 64` / `clCCardio module already exists` — SDK не допускает повторного создания на одном устройстве |
 | `requestDevices` без разрешений Android | Пустой список или `BluetoothDisabledException` |
 | `start()` дважды | Второй вызов игнорируется — SDK проверяет состояние |
+| `stop()` дважды | SIGABRT — второй `clCDevice_Stop` на уже остановленной сессии приводит к крэшу нативной библиотеки |
