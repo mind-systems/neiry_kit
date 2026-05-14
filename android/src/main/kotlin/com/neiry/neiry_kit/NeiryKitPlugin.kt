@@ -498,6 +498,10 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        deviceBridge?.release()
+        deviceBridge = null
+        deviceLocatorBridge?.dispose()
+        deviceLocatorBridge = null
         productivityBridge?.dispose()
         productivityBridge = null
         memsBridge?.dispose()
@@ -512,10 +516,6 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
         nfbCalibratorBridge = null
         nfbBridge?.dispose()
         nfbBridge = null
-        deviceLocatorBridge?.dispose()
-        deviceBridge?.release()
-        deviceLocatorBridge = null
-        deviceBridge = null
         nativeBridge = null
 
         for ((_, channel) in methodChannels) {
