@@ -59,6 +59,41 @@ final data = await NfbCalibrator.calibrateIndividualQuick();
 - `tooManyArtifacts` — слишком много помех: пользователь двигался, неплотный контакт электродов
 - `peakFrequencyAtBorder` — альфа-пик попал на границу диапазона (7 или 13 Гц), редкий случай
 
+Когда `isValid == false`, числовые поля (`individualFrequency`, `individualPeakFrequency`,
+`peakPower` и остальные) содержат дефолтные значения SDK, а не реальные данные пользователя.
+Передавать такой объект в классификаторы нельзя.
+
+```dart
+NfbCalibrator.calibrateIndividual().listen((event) {
+  switch (event) {
+    case CalibrationStageFinished(:final stage):
+      print('Стадия ${stage.index + 1} завершена');
+    case CalibrationCompleted(:final data):
+      if (!data.isValid) {
+        switch (data.failReason) {
+          case NfbCalibrationFailReason.tooManyArtifacts:
+            // Проверить импеданс, попросить пользователя сесть ровно и не двигаться
+            showRetryDialog('Слишком много помех. Проверьте контакт электродов.');
+          case NfbCalibrationFailReason.peakFrequencyAtBorder:
+            // Редкий физиологический вариант — обычно помогает повторная попытка
+            showRetryDialog('Попробуйте ещё раз.');
+          case NfbCalibrationFailReason.none:
+            break; // не бывает при isValid == false
+        }
+        return;
+      }
+      // data.isValid == true — можно сохранять и передавать классификатору
+      saveCalibration(data);
+  }
+});
+```
+
+Типичный порядок действий при неудаче:
+1. Показать пользователю конкретную причину (не просто «ошибка»).
+2. Если `tooManyArtifacts` — предложить проверить импеданс через `device.resistanceStream` перед повторной попыткой.
+3. Предложить повторить quick mode или полную калибровку.
+4. Если неудачи повторяются — сначала выполнить проверку импеданса и устранить плохой контакт.
+
 ## Сохранение и загрузка
 
 Результат калибровки стоит сохранять между сессиями. `IndividualNfbData.toMap()` сериализует объект в `Map<String, dynamic>`, который можно хранить в JSON или локальной базе данных. При следующем запуске данные восстанавливаются через `fromMap` и передаются классификатору.

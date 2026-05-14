@@ -205,6 +205,8 @@ class _DoneContent extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
+        // For handling invalid calibration (failReason, recovery flow):
+        // docs/reference/calibration.md → "Результат калибровки"
         Text(
           uiState.isValid ? 'Status: valid' : 'Status: invalid',
           style: TextStyle(
