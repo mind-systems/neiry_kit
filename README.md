@@ -36,6 +36,12 @@ nfb.stateStream.listen((state) {
 });
 ```
 
+## Запуск примера
+
+```bash
+cd example && flutter run
+```
+
 ## Документация
 
 Индекс документации — в `CLAUDE.md`.

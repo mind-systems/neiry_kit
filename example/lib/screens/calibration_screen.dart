@@ -58,7 +58,7 @@ class _CalibrationCardState extends ConsumerState<_CalibrationCard> {
       if (!notifier.isRunning) return; // skip cold-open, import, and Retry rebuilds
       if (notifier.isAborting) return; // abort()'s loading→error→data transitions
       final sound = ref.read(soundServiceProvider);
-      if (!prev!.hasValue && next.hasValue && next.value != null) {
+      if (prev!.isLoading && next.hasValue && next.value != null) {
         sound.playDone();
       } else if (!prev.hasError && next.hasError) {
         sound.playError();
