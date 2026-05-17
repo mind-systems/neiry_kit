@@ -95,6 +95,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 | Guide | Path |
 |---|---|
+| Documentation landing page (streams, classifiers, session flow) | `docs/overview.md` |
 | Project setup (deps, permissions, iOS plist) | `docs/guides/setup.md` |
 | Full session walkthrough | `docs/guides/session-guide.md` |
 | Error handling & exception types | `docs/guides/error-handling.md` |
