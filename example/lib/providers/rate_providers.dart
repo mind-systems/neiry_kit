@@ -33,3 +33,9 @@ final eegCallbackRateProvider = StreamProvider<double>((ref) {
 final psdRateProvider = StreamProvider<double>((ref) {
   return rateOf(ref.watch(neiryServiceProvider).psdStream);
 });
+
+/// MEMS callback rate — how many batch events fire per second (each batch
+/// contains multiple MemsSamples).
+final memsRateProvider = StreamProvider<double>((ref) {
+  return rateOf(ref.watch(neiryServiceProvider).memsStream);
+});

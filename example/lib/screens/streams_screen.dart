@@ -66,6 +66,7 @@ class _RateMonitorCard extends ConsumerWidget {
             _RateRow('Cardio PPG', ref.watch(cardioPpgRateProvider)),
             _RateRow('EEG callbacks', ref.watch(eegCallbackRateProvider)),
             _RateRow('PSD callbacks', ref.watch(psdRateProvider)),
+            _RateRow('MEMS callbacks', ref.watch(memsRateProvider)),
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
