@@ -1,7 +1,10 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
 
+import '../providers/rate_providers.dart';
 import '../providers/stream_providers.dart';
 
 /// Displays all live data streams: EEG, PSD, resistance, battery, artifacts.
@@ -25,8 +28,96 @@ class StreamsScreen extends ConsumerWidget {
             _BatteryCard(),
             const SizedBox(height: 12),
             _ArtifactsCard(),
+            const SizedBox(height: 12),
+            const _RateMonitorCard(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Rate monitor ─────────────────────────────────────────────────────────────
+
+class _RateMonitorCard extends ConsumerWidget {
+  const _RateMonitorCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Callback Rate Monitor',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '3-second rolling window · events/sec',
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            _RateRow('NFB', ref.watch(nfbRateProvider)),
+            _RateRow('Emotions', ref.watch(emotionsRateProvider)),
+            _RateRow('Cardio', ref.watch(cardioRateProvider)),
+            _RateRow('Cardio PPG', ref.watch(cardioPpgRateProvider)),
+            _RateRow('EEG callbacks', ref.watch(eegCallbackRateProvider)),
+            _RateRow('PSD callbacks', ref.watch(psdRateProvider)),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonal(
+                onPressed: () => _dumpRates(ref),
+                child: const Text('Log Dump'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _fmtHz(AsyncValue<double> v) =>
+    v.when(loading: () => '—', error: (_, _) => 'err', data: (hz) => '${hz.toStringAsFixed(1)} Hz');
+
+void _dumpRates(WidgetRef ref) {
+  final lines = [
+    '──── Neiry callback rate dump ────',
+    'NFB            : ${_fmtHz(ref.read(nfbRateProvider))}',
+    'Emotions       : ${_fmtHz(ref.read(emotionsRateProvider))}',
+    'Cardio         : ${_fmtHz(ref.read(cardioRateProvider))}',
+    'Cardio PPG     : ${_fmtHz(ref.read(cardioPpgRateProvider))}',
+    'EEG callbacks  : ${_fmtHz(ref.read(eegCallbackRateProvider))}',
+    'PSD callbacks  : ${_fmtHz(ref.read(psdRateProvider))}',
+    '─────────────────────────────────',
+  ];
+  log(lines.join('\n'), name: 'RateMonitor');
+}
+
+class _RateRow extends StatelessWidget {
+  const _RateRow(this.label, this.rateAsync);
+
+  final String label;
+  final AsyncValue<double> rateAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = rateAsync.when(
+      loading: () => '—',
+      error: (_, _) => 'err',
+      data: (hz) => '${hz.toStringAsFixed(1)} Hz',
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(width: 120, child: Text(label)),
+          Text(text, style: const TextStyle(fontFamily: 'monospace')),
+        ],
       ),
     );
   }
