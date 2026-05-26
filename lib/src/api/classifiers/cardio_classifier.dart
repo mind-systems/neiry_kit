@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 import '../device.dart';
 import '../../channel/channel_names.dart';
 import '../../models/cardio_data.dart';
-import '../../models/ppg_data.dart';
 import '../../models/individual_nfb_data.dart';
+import '../../models/ppg_data.dart';
+import '../../models/rr_interval.dart';
+import '../../processing/ppg_peak_detector.dart';
 
 /// Wraps the native `clCCardio` lifecycle and exposes Cardio classifier
 /// outputs as typed streams.
@@ -29,6 +31,14 @@ import '../../models/individual_nfb_data.dart';
 ///
 /// // Listen for raw PPG waveform batches:
 /// classifier.ppgStream.listen((ppg) { /* handle PpgData */ });
+///
+/// // Listen for beat-to-beat RR intervals derived from the PPG signal:
+/// classifier.rrStream.listen((rr) {
+///   if (!rr.isArtifact) animateBeat(rr.intervalMs);
+/// });
+/// // Filter [RRInterval.isArtifact] before driving animations or HRV math.
+/// // [RRInterval.timestamp] is a wall-clock [DateTime] decoded from the device
+/// // timestamp — do not compare it to monotonic time sources.
 ///
 /// // Know when internal calibration completes and valid metrics begin:
 /// classifier.calibratedStream.listen((_) { /* calibration done */ });
@@ -125,6 +135,10 @@ class CardioClassifier {
 
   bool _disposed = false;
 
+  // ── Peak detector ──────────────────────────────────────────────────────────
+
+  final _peakDetector = PpgPeakDetector();
+
   // ── Cached streams ─────────────────────────────────────────────────────────
 
   late final Stream<CardioData> _stateStream = _eventStream(
@@ -144,6 +158,40 @@ class CardioClassifier {
   late final Stream<void> _calibratedStream = const EventChannel(
     NeiryEvents.cardioCalibratedEvent,
   ).receiveBroadcastStream({NeiryArgs.serial: _serial}).map((_) {});
+
+  // Promoted to a field so dispose() can cancel it explicitly before close(),
+  // eliminating the window where a live PPG batch could call controller.add()
+  // on an already-closed controller.
+  StreamSubscription<PpgData>? _rrPpgSub;
+
+  // Backed by an explicitly managed broadcast StreamController so that
+  // re-subscription after all listeners cancel works cleanly — a plain
+  // .asBroadcastStream() would cancel the underlying PPG subscription on the
+  // last cancel and cannot reopen it on a subsequent listen.
+  late final StreamController<RRInterval> _rrController = () {
+    // `late` allows the closure to refer to `controller` before the assignment
+    // completes — the callbacks are invoked only after the controller is fully
+    // constructed, so the forward reference is safe.
+    late StreamController<RRInterval> controller;
+    controller = StreamController<RRInterval>.broadcast(
+      onListen: () {
+        _rrPpgSub = _ppgStream.listen(
+          (batch) {
+            for (final rr in _peakDetector.processBatch(batch)) {
+              controller.add(rr);
+            }
+          },
+          onError: controller.addError,
+        );
+      },
+      onCancel: () async {
+        await _rrPpgSub?.cancel();
+        _rrPpgSub = null;
+      },
+    );
+    return controller;
+  }();
+  late final Stream<RRInterval> _rrStream = _rrController.stream;
 
   // ── Guards ─────────────────────────────────────────────────────────────────
 
@@ -198,6 +246,16 @@ class CardioClassifier {
     return _calibratedStream;
   }
 
+  /// Emits beat-to-beat [RRInterval]s derived from the raw PPG signal.
+  ///
+  /// Intervals flagged as motion artifacts have [RRInterval.isArtifact] set to
+  /// `true` — filter these out before driving animations or HRV calculations.
+  Stream<RRInterval> get rrStream {
+    _checkNotDisposed();
+    _checkReady();
+    return _rrStream;
+  }
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   /// Releases the native `clCCardio` handle.
@@ -208,13 +266,18 @@ class CardioClassifier {
     if (_disposed) return;
     _disposed = true;
     await _nativeReady;
-    if (_createError != null) {
-      // Native handle was never created — nothing to destroy.
-      return;
+    // Only destroy the native handle if it was successfully created.
+    // Dart-side cleanup (subscription + controller) runs unconditionally so
+    // that a consumer who subscribed before the async create rejected does not
+    // leak the EventChannel listener or the broadcast controller.
+    if (_createError == null) {
+      await _channel.invokeMethod<void>(
+        ClassifierMethods.dispose,
+        {NeiryArgs.serial: _serial},
+      );
     }
-    await _channel.invokeMethod<void>(
-      ClassifierMethods.dispose,
-      {NeiryArgs.serial: _serial},
-    );
+    await _rrPpgSub?.cancel();
+    _rrPpgSub = null;
+    await _rrController.close();
   }
 }

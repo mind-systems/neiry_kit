@@ -31,3 +31,4 @@ export 'src/models/productivity_indexes.dart';
 export 'src/models/productivity_metrics.dart';
 export 'src/models/psd_data.dart';
 export 'src/models/resistance_data.dart';
+export 'src/models/rr_interval.dart';

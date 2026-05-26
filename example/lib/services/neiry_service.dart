@@ -64,6 +64,7 @@ class NeiryService {
   final _productivityMetricsController =
       StreamController<ProductivityMetrics>.broadcast();
   final _cardioPpgController = StreamController<PpgData>.broadcast();
+  final _rrController = StreamController<RRInterval>.broadcast();
   final _physioCalibrationProgressController =
       StreamController<double>.broadcast();
   final _productivityCalibrationProgressController =
@@ -195,6 +196,10 @@ class NeiryService {
         _cardio!.ppgStream.listen(
           _cardioPpgController.add,
           onError: _cardioPpgController.addError,
+        ),
+        _cardio!.rrStream.listen(
+          _rrController.add,
+          onError: _rrController.addError,
         ),
         _mems!.memsStream.listen(
           _memsController.add,
@@ -338,6 +343,7 @@ class NeiryService {
     await _productivityIndexesController.close();
     await _productivityMetricsController.close();
     await _cardioPpgController.close();
+    await _rrController.close();
     await _physioCalibrationProgressController.close();
     await _productivityCalibrationProgressController.close();
     await _physioCalibratedController.close();
@@ -394,6 +400,10 @@ class NeiryService {
 
   /// Emits PPG sample batches from the [CardioClassifier].
   Stream<PpgData> get cardioPpgStream => _cardioPpgController.stream;
+
+  /// Emits beat-to-beat RR intervals derived from the raw PPG signal.
+  /// Filter [RRInterval.isArtifact] before using for animation or HRV.
+  Stream<RRInterval> get rrStream => _rrController.stream;
 
   /// Emits Physio baseline-calibration progress (0.0–1.0).
   Stream<double> get physioCalibrationProgressStream =>
