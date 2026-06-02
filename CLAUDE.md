@@ -98,6 +98,7 @@ dart run build_runner build --delete-conflicting-outputs
 | Documentation landing page (streams, classifiers, session flow) | `docs/overview.md` |
 | Project setup (deps, permissions, iOS plist) | `docs/guides/setup.md` |
 | Full session walkthrough | `docs/guides/session-guide.md` |
+| Teardown sequence & SDK invariants | `docs/guides/teardown.md` |
 | Error handling & exception types | `docs/guides/error-handling.md` |
 | Example app structure | `docs/guides/example-app.md` |
 | Device lifecycle (DeviceLocator, Device) | `docs/reference/device-lifecycle.md` |

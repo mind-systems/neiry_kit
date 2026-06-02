@@ -216,11 +216,16 @@ class NeiryKitPlugin : FlutterPlugin, MethodCallHandler {
                     bridge.disconnect()
                     result.success(null)
                 }
+                "unregisterCallbacks" -> {
+                    bridge.unregisterCallbacks()
+                    result.success(null)
+                }
                 "start" -> {
                     bridge.start()
                     result.success(null)
                 }
                 "stop" -> result.success(bridge.stop())
+                "stopStream" -> result.success(bridge.stopStream())
                 "getInfo" -> result.notImplemented()
                 "getBatteryCharge" -> result.success(bridge.getBatteryCharge())
                 "getMode" -> result.success(bridge.getMode())

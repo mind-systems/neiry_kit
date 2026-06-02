@@ -378,7 +378,7 @@ class DeviceBridge: NSObject {
         }
     }
 
-    private func unregisterCallbacks() {
+    func unregisterCallbacks() {
         guard let dev = device else { return }
         clCDevice_SetOnEEGDataEvent(dev, nil)
         clCDevice_SetOnPSDDataEvent(dev, nil)
@@ -423,10 +423,15 @@ class DeviceBridge: NSObject {
     }
 
     func disconnect() throws {
-        let dev = try requireDevice()
+        guard let dev = device else { return }  // already released by a prior stop() call
+        unregisterCallbacks()
         var error = clCError()
         clCDevice_Disconnect(dev, &error)
         try checkCError(error)
+        clCDevice_Release(dev)
+        device = nil
+        serial = nil
+        channelNamesHandle = nil
     }
 
     func start() throws {
@@ -436,12 +441,33 @@ class DeviceBridge: NSObject {
         try checkCError(error)
     }
 
+    /// Stops streaming without releasing the device handle. Use inside a
+    /// disconnect sequence so classifiers can be disposed before `disconnect()`
+    /// releases the handle.
     @discardableResult
-    func stop() throws -> Bool {
+    func stopStream() throws -> Bool {
+        unregisterCallbacks()
         let dev = try requireDevice()
         var error = clCError()
         clCDevice_Stop(dev, &error)
         try checkCError(error)
+        // Handle intentionally NOT released — caller disposes classifiers first.
+        return true
+    }
+
+    @discardableResult
+    func stop() throws -> Bool {
+        unregisterCallbacks()
+        let dev = try requireDevice()
+        var error = clCError()
+        clCDevice_Stop(dev, &error)
+        try checkCError(error)
+        // Release immediately to prevent SDK from accessing stale
+        // CoreBluetooth references after async BLE teardown.
+        clCDevice_Release(dev)
+        device = nil
+        serial = nil
+        channelNamesHandle = nil
         return true
     }
 

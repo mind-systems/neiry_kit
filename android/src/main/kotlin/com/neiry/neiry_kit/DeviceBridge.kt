@@ -124,6 +124,12 @@ class DeviceBridge(private val nativeBridge: NativeBridge) {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    fun unregisterCallbacks() {
+        val h = handle
+        if (h == 0L) return
+        nativeBridge.nativeUnregisterDeviceCallbacks(h)
+    }
+
     fun connect(bipolarChannels: Boolean) {
         val h = requireHandle()
         try {
@@ -134,12 +140,18 @@ class DeviceBridge(private val nativeBridge: NativeBridge) {
     }
 
     fun disconnect() {
-        val h = requireHandle()
+        val h = handle
+        if (h == 0L) return  // already released by a prior stop() call
+        nativeBridge.nativeUnregisterDeviceCallbacks(h)
         try {
             nativeBridge.nativeDisconnectDevice(h)
         } catch (e: RuntimeException) {
             throw parseSdkError(e.message ?: "255|Unknown error")
         }
+        nativeBridge.nativeReleaseDevice(h)
+        handle = 0L
+        serial = null
+        channelNamesHandle = 0L
     }
 
     fun start() {
@@ -151,13 +163,38 @@ class DeviceBridge(private val nativeBridge: NativeBridge) {
         }
     }
 
-    fun stop(): Boolean {
+    /**
+     * Stops streaming without releasing the native handle. Use inside a
+     * disconnect sequence so classifiers (which need the handle) can be
+     * disposed before [disconnect] calls [nativeReleaseDevice].
+     */
+    fun stopStream(): Boolean {
         val h = requireHandle()
+        nativeBridge.nativeUnregisterDeviceCallbacks(h)
         try {
             nativeBridge.nativeStopDevice(h)
         } catch (e: RuntimeException) {
             throw parseSdkError(e.message ?: "255|Unknown error")
         }
+        // Handle intentionally NOT released here — caller disposes classifiers
+        // before calling disconnect() which does the release.
+        return true
+    }
+
+    fun stop(): Boolean {
+        val h = requireHandle()
+        nativeBridge.nativeUnregisterDeviceCallbacks(h)
+        try {
+            nativeBridge.nativeStopDevice(h)
+        } catch (e: RuntimeException) {
+            throw parseSdkError(e.message ?: "255|Unknown error")
+        }
+        // Release immediately — prevents libCapsuleClient.so from holding
+        // stale GATT JNI refs after BluetoothGatt.unregisterApp() fires.
+        nativeBridge.nativeReleaseDevice(h)
+        handle = 0L
+        serial = null
+        channelNamesHandle = 0L
         return true
     }
 

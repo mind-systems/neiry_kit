@@ -86,8 +86,10 @@ abstract final class DeviceMethods {
   static const String createDevice = 'createDevice';
   static const String connect = 'connect';
   static const String disconnect = 'disconnect';
+  static const String unregisterCallbacks = 'unregisterCallbacks';
   static const String start = 'start';
   static const String stop = 'stop';
+  static const String stopStream = 'stopStream';
   static const String getMode = 'getMode';
   static const String isConnected = 'isConnected';
   static const String getBatteryCharge = 'getBatteryCharge';

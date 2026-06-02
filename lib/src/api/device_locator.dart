@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
@@ -169,13 +170,20 @@ class DeviceLocator {
   /// Tells the native side to allocate the device handle, then wraps it in a
   /// [Device] instance that exposes the full lifecycle and streaming API.
   Future<Device> createDevice(String serial) async {
+    log('DeviceLocator.createDevice($serial) — disposed: $_disposed createError: $_createError', name: 'neiry_kit');
     _checkNotDisposed();
     await _nativeReady;
     _checkReady();
-    await _channel.invokeMethod<void>(
-      DeviceLocatorMethods.createDevice,
-      {NeiryArgs.serial: serial},
-    );
+    try {
+      await _channel.invokeMethod<void>(
+        DeviceLocatorMethods.createDevice,
+        {NeiryArgs.serial: serial},
+      );
+    } catch (e) {
+      log('DeviceLocator.createDevice($serial) error: $e', name: 'neiry_kit');
+      rethrow;
+    }
+    log('DeviceLocator.createDevice($serial) done', name: 'neiry_kit');
     return Device(serial: serial);
   }
 

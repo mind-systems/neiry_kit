@@ -166,6 +166,7 @@ class Device {
   /// Completes when the native connect call is dispatched (non-blocking —
   /// listen to [connectionStateStream] to detect the actual connection event).
   Future<void> connect({bool bipolarChannels = false}) async {
+    log('Device.connect — serial: $serial _disposed: $_disposed _connected: $_connected', name: 'neiry_kit');
     _checkNotDisposed();
     if (_connected) throw StateError('Device is already connected');
     await _channel.invokeMethod<void>(DeviceMethods.connect, {
@@ -174,6 +175,19 @@ class Device {
     });
     _connected = true;
     _startStateTracking();
+  }
+
+  /// Unregisters all native SDK callbacks for this device.
+  ///
+  /// Must be called before cancelling fan-in subscriptions (which deletes JNI
+  /// global refs) and before disposing classifiers (which access device state).
+  /// Calling [stop] or [disconnect] afterwards is safe — they re-run unregister
+  /// internally as a no-op.
+  Future<void> unregisterCallbacks() async {
+    _checkNotDisposed();
+    await _channel.invokeMethod<void>(DeviceMethods.unregisterCallbacks, {
+      NeiryArgs.serial: serial,
+    });
   }
 
   /// Disconnects from the device.
@@ -202,6 +216,20 @@ class Device {
       NeiryArgs.serial: serial,
     });
     _started = true;
+  }
+
+  /// Stops streaming without releasing the native device handle.
+  ///
+  /// Use this inside a disconnect sequence so that classifiers can still be
+  /// disposed (they need the handle) before [disconnect] releases it.
+  /// For a standalone Stop (no subsequent Disconnect), use [stop] instead —
+  /// it releases the handle immediately to prevent stale GATT refs.
+  Future<void> stopStream() async {
+    _checkNotDisposed();
+    await _channel.invokeMethod<void>(DeviceMethods.stopStream, {
+      NeiryArgs.serial: serial,
+    });
+    _started = false;
   }
 
   /// Stops EEG streaming.

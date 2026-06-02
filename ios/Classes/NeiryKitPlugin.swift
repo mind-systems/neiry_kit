@@ -191,6 +191,9 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
             } catch {
                 result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
             }
+        case "unregisterCallbacks":
+            bridge.unregisterCallbacks()
+            result(nil)
         case "start":
             do {
                 try bridge.start()
@@ -203,6 +206,15 @@ public class NeiryKitPlugin: NSObject, FlutterPlugin {
         case "stop":
             do {
                 let ret = try bridge.stop()
+                result(ret)
+            } catch let e as FlutterError {
+                result(e)
+            } catch {
+                result(FlutterError(code: "UNKNOWN", message: "\(error)", details: nil))
+            }
+        case "stopStream":
+            do {
+                let ret = try bridge.stopStream()
                 result(ret)
             } catch let e as FlutterError {
                 result(e)

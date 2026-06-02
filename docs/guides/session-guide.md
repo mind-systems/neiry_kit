@@ -113,14 +113,26 @@ if (calibration != null) {
 
 ## 8. Завершить сессию
 
+Порядок вызовов при завершении строгий — SDK держит нативные JNI-ссылки на BLE-объекты и падает если освобождать их в неправильном порядке. Подробнее — в [руководстве по завершению сессии](teardown.md).
+
 ```dart
-await device.stop();
+// 1. Остановить стриминг (без освобождения хендла)
+if (device.isStarted) await device.stopStream();
+
+// 2. Освободить классификаторы (хендл ещё жив)
+await nfb.dispose();
+await physio.dispose();
+// ... остальные классификаторы
+
+// 3. Отключить и освободить хендл
 await device.disconnect();
-device.dispose();
+await device.dispose();
+
+// 4. Освободить локатор (если работа с SDK завершена)
 await locator.dispose();
 ```
 
-После `dispose()` объекты нельзя переиспользовать — нативный C-хэндл освобождён. Для новой сессии создавай `DeviceLocator()` заново.
+После `dispose()` объект нельзя переиспользовать — нативный C-хэндл освобождён. `DeviceLocator` переиспользовать можно — он синглтон.
 
 ## Типичные ошибки в порядке вызовов
 
@@ -131,4 +143,5 @@ await locator.dispose();
 | Создание классификатора дважды | `Fatal signal 64` / `clCCardio module already exists` — SDK не допускает повторного создания на одном устройстве |
 | `requestDevices` без разрешений Android | Пустой список или `BluetoothDisabledException` |
 | `start()` дважды | Второй вызов игнорируется — SDK проверяет состояние |
-| `stop()` дважды | SIGABRT — второй `clCDevice_Stop` на уже остановленной сессии приводит к крэшу нативной библиотеки |
+| `stop()` вместо `stopStream()` в disconnect-последовательности | `SIGABRT` — `nativeReleaseDevice` внутри `stop()` освобождает хендл раньше, чем классификаторы успевают освободиться |
+| Dispose классификаторов после `disconnect()` | `SIGABRT` — хендл уже освобождён, `IsClassifierSupported` падает |
