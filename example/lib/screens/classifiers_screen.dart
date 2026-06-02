@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
@@ -8,6 +6,7 @@ import '../providers/classifier_stream_providers.dart';
 import '../providers/device_state_providers.dart';
 import '../providers/physio_actions_provider.dart';
 import '../providers/physio_baselines_file_manager.dart';
+import '../utils/nlog.dart';
 
 /// Shows the Emotions and Physiological States classifier readouts.
 class ClassifiersScreen extends ConsumerWidget {
@@ -156,7 +155,7 @@ class _PhysioCard extends ConsumerWidget {
               child: ElevatedButton(
                 onPressed: isConnected
                     ? () {
-                        log('Physio: Start Baseline Calibration tapped', name: 'Neiry');
+                        nlog('Physio: Start Baseline Calibration tapped', name: 'Neiry');
                         ref
                             .read(physioActionsProvider.notifier)
                             .startBaselineCalibration();
@@ -171,7 +170,7 @@ class _PhysioCard extends ConsumerWidget {
               child: OutlinedButton(
                 onPressed: isConnected
                     ? () async {
-                        log('Physio: Import Baselines tapped', name: 'Neiry');
+                        nlog('Physio: Import Baselines tapped', name: 'Neiry');
                         final messenger = ScaffoldMessenger.of(context);
                         final result =
                             await PhysioBaselinesFileManager.importFromFile();
@@ -195,7 +194,7 @@ class _PhysioCard extends ConsumerWidget {
                 onPressed: baselines == null
                     ? null
                     : () async {
-                        log('Physio: Export Baselines tapped', name: 'Neiry');
+                        nlog('Physio: Export Baselines tapped', name: 'Neiry');
                         final messenger = ScaffoldMessenger.of(context);
                         final file = await PhysioBaselinesFileManager
                             .exportToFile(baselines);

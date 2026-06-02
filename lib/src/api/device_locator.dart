@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
 import '../channel/channel_names.dart';
 import '../channel/enums.dart';
 import '../models/device_info.dart';
+import '../util/nlog.dart';
 import 'device.dart';
 
 /// Wraps the native `clCDeviceLocator` lifecycle — create, scan, create device,
@@ -119,8 +119,12 @@ class DeviceLocator {
     _checkNotDisposed();
 
     // Cancel any in-progress scan before starting a new one.
-    _scanSubscription?.cancel();
-    _scanSubscription = null;
+    if (_scanSubscription != null) {
+      nlog('DeviceLocator.requestDevices: cancelling previous scan', name: 'neiry_kit');
+      _scanSubscription?.cancel();
+      _scanSubscription = null;
+    }
+    nlog('DeviceLocator.requestDevices: starting scan type=$type searchTime=${searchTime}s', name: 'neiry_kit');
 
     final controller = StreamController<List<DeviceInfo>>();
 
@@ -143,13 +147,16 @@ class DeviceLocator {
           final list = (raw as List)
               .map((e) => DeviceInfo.fromMap(e as Map<Object?, Object?>))
               .toList();
+          nlog('DeviceLocator.requestDevices: scan result — ${list.length} device(s)', name: 'neiry_kit');
           controller.add(list);
         }
       },
       onError: (Object error, StackTrace stack) {
+        nlog('DeviceLocator.requestDevices: scan stream error: $error', name: 'neiry_kit');
         if (!controller.isClosed) controller.addError(error, stack);
       },
       onDone: () {
+        nlog('DeviceLocator.requestDevices: scan stream done (controller.isClosed=${controller.isClosed})', name: 'neiry_kit');
         clearIfCurrent();
         if (!controller.isClosed) controller.close();
       },
@@ -158,6 +165,7 @@ class DeviceLocator {
     _scanSubscription = thisSub;
 
     controller.onCancel = () {
+      nlog('DeviceLocator.requestDevices: controller cancelled', name: 'neiry_kit');
       clearIfCurrent();
       thisSub.cancel();
     };
@@ -170,7 +178,7 @@ class DeviceLocator {
   /// Tells the native side to allocate the device handle, then wraps it in a
   /// [Device] instance that exposes the full lifecycle and streaming API.
   Future<Device> createDevice(String serial) async {
-    log('DeviceLocator.createDevice($serial) — disposed: $_disposed createError: $_createError', name: 'neiry_kit');
+    nlog('DeviceLocator.createDevice($serial) — disposed: $_disposed createError: $_createError', name: 'neiry_kit');
     _checkNotDisposed();
     await _nativeReady;
     _checkReady();
@@ -180,10 +188,10 @@ class DeviceLocator {
         {NeiryArgs.serial: serial},
       );
     } catch (e) {
-      log('DeviceLocator.createDevice($serial) error: $e', name: 'neiry_kit');
+      nlog('DeviceLocator.createDevice($serial) error: $e', name: 'neiry_kit');
       rethrow;
     }
-    log('DeviceLocator.createDevice($serial) done', name: 'neiry_kit');
+    nlog('DeviceLocator.createDevice($serial) done', name: 'neiry_kit');
     return Device(serial: serial);
   }
 

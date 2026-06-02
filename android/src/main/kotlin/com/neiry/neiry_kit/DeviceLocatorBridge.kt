@@ -16,6 +16,20 @@ class DeviceLocatorBridge(
 
     private var handle: Long = 0L
 
+    /**
+     * The currently active guarded sink. Used to drop stale events that arrive
+     * after a new scan has already started.
+     *
+     * Sequence that causes stale events:
+     * 1. Scan A ends — native queues endOfStream via Handler.post(mainHandler, ...)
+     * 2. User immediately scans again — onListen registers a new Dart handler
+     * 3. Queued endOfStream fires → reaches the NEW handler → controller.close() → "No element"
+     *
+     * Wrapping each sink lets us null out `currentSink` on every new onListen,
+     * so the guarded wrapper rejects the stale event before it reaches Dart.
+     */
+    @Volatile private var currentSink: EventChannel.EventSink? = null
+
     companion object {
         /** Device handles keyed by serial. DeviceBridge looks up entries here. */
         var devices: MutableMap<String, Long> = mutableMapOf()
@@ -96,13 +110,32 @@ class DeviceLocatorBridge(
             return
         }
 
+        // Wrap the real sink so stale events from the previous scan are dropped.
+        // When a new onListen fires, currentSink is replaced — the old wrapper's
+        // identity check fails and any pending Handler.post(endOfStream) is silently ignored.
+        val wrappedSink = events?.let { realSink ->
+            object : EventChannel.EventSink {
+                override fun success(event: Any?) {
+                    if (currentSink === this) realSink.success(event)
+                }
+                override fun error(code: String, message: String?, details: Any?) {
+                    if (currentSink === this) realSink.error(code, message, details)
+                }
+                override fun endOfStream() {
+                    if (currentSink === this) realSink.endOfStream()
+                }
+            }
+        }
+        currentSink = wrappedSink
+
         // Register the sink BEFORE starting the scan so the callback always finds it set.
-        nativeBridge.nativeSetDeviceListSink(events)
+        nativeBridge.nativeSetDeviceListSink(wrappedSink)
 
         try {
             nativeBridge.nativeRequestDevices(handle, deviceType, searchTime)
         } catch (e: RuntimeException) {
             val err = parseSdkError(e.message ?: "255|Unknown error")
+            currentSink = null
             events?.error(err.code, err.message, err.details)
             events?.endOfStream()
             nativeBridge.nativeSetDeviceListSink(null)
@@ -110,6 +143,7 @@ class DeviceLocatorBridge(
     }
 
     override fun onCancel(arguments: Any?) {
+        currentSink = null
         nativeBridge.nativeSetDeviceListSink(null)
     }
 }

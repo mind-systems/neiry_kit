@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
@@ -7,6 +6,7 @@ import 'package:neiry_kit/neiry_kit.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/neiry_service_provider.dart';
+import '../utils/nlog.dart';
 import '../providers/calibration_provider.dart';
 import '../providers/device_scan_provider.dart';
 import '../providers/device_state_providers.dart';
@@ -84,13 +84,15 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   // ── Scan ──────────────────────────────────────────────────────────────────
 
   Future<void> _scan() async {
-    log('Scan tapped', name: 'Neiry');
+    nlog('Scan tapped — _scanParams: $_scanParams selectedType: $_selectedType searchTime: $_searchTime', name: 'Neiry');
     if (!await _checkAndRequestPermissions()) return;
     if (!mounted) return;
     final params = (_selectedType, _searchTime);
     if (_scanParams == params) {
-      // Same params — invalidate so the provider re-runs the scan.
+      nlog('Scan: same params, invalidating provider', name: 'Neiry');
       ref.invalidate(deviceScanProvider(params));
+    } else {
+      nlog('Scan: new params $params', name: 'Neiry');
     }
     setState(() => _scanParams = params);
   }
@@ -98,7 +100,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   // ── Device actions ────────────────────────────────────────────────────────
 
   Future<void> _connect() async {
-    log('Connect tapped: $_selectedSerial', name: 'Neiry');
+    nlog('Connect tapped: $_selectedSerial', name: 'Neiry');
     final serial = _selectedSerial;
     if (serial == null) return;
     // Reset started flag before connecting — prevents stale `started` state
@@ -112,31 +114,35 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   }
 
   Future<void> _start() async {
-    log('Start tapped', name: 'Neiry');
+    nlog('Start tapped', name: 'Neiry');
     try {
       await ref.read(neiryServiceProvider).start();
       ref.read(deviceIsStartedProvider.notifier).state = true;
     } on NeiryException catch (e) {
+      nlog('Start error (NeiryException): ${e.message}', name: 'Neiry');
       _showError(e.message);
     } catch (e) {
+      nlog('Start error: $e', name: 'Neiry');
       _showError(e.toString());
     }
   }
 
   Future<void> _stop() async {
-    log('Stop tapped', name: 'Neiry');
+    nlog('Stop tapped', name: 'Neiry');
     try {
       await ref.read(neiryServiceProvider).stop();
       ref.read(deviceIsStartedProvider.notifier).state = false;
     } on NeiryException catch (e) {
+      nlog('Stop error (NeiryException): ${e.message}', name: 'Neiry');
       _showError(e.message);
     } catch (e) {
+      nlog('Stop error: $e', name: 'Neiry');
       _showError(e.toString());
     }
   }
 
   Future<void> _disconnect() async {
-    log('Disconnect tapped', name: 'Neiry');
+    nlog('Disconnect tapped', name: 'Neiry');
     try {
       await ref.read(neiryServiceProvider).disconnect();
       ref.read(deviceIsStartedProvider.notifier).state = false;
@@ -278,7 +284,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
                   subtitle: Text(d.serial),
                   selected: _selectedSerial == d.serial,
                   onTap: () {
-                    log('Device selected: ${d.serial}', name: 'Neiry');
+                    nlog('Device selected: ${d.serial}', name: 'Neiry');
                     setState(() => _selectedSerial = d.serial);
                   },
                 ),

@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:neiry_kit/neiry_kit.dart';
+
+import '../utils/nlog.dart';
 
 /// Singleton-style service that owns the entire device + classifier lifecycle.
 ///
@@ -113,7 +114,7 @@ class NeiryService {
     IndividualNfbData? nfbData,
   }) async {
     _checkNotDisposed();
-    log('[NeiryService] connect — serial: $serial _connecting: $_connecting _device: ${_device == null ? 'null' : 'set'} isConnected: $isConnected', name: 'neiry_kit');
+    nlog('[NeiryService] connect — serial: $serial _connecting: $_connecting _device: ${_device == null ? 'null' : 'set'} isConnected: $isConnected', name: 'neiry_kit');
     if (_connecting) throw StateError('Connect already in flight');
     if (isConnected) throw StateError('Already connected — call disconnect() first');
 
@@ -121,9 +122,9 @@ class NeiryService {
     try {
       _nfbData = nfbData;
 
-      log('[NeiryService] calling createDevice($serial)', name: 'neiry_kit');
+      nlog('[NeiryService] calling createDevice($serial)', name: 'neiry_kit');
       _device = await _locator.createDevice(serial);
-      log('[NeiryService] createDevice done', name: 'neiry_kit');
+      nlog('[NeiryService] createDevice done', name: 'neiry_kit');
 
       try {
         await _device!.connect(bipolarChannels: bipolarChannels);
@@ -251,7 +252,7 @@ class NeiryService {
   /// the next [connect] call can re-feed them.
   Future<void> disconnect() async {
     if (_device == null) return;
-    log('[NeiryService] disconnect — serial: ${_device!.serial} connected: ${_device!.isConnected} started: ${_device!.isStarted}', name: 'neiry_kit');
+    nlog('[NeiryService] disconnect — serial: ${_device!.serial} connected: ${_device!.isConnected} started: ${_device!.isStarted}', name: 'neiry_kit');
 
     // Synthesize a disconnected event so stream consumers (e.g. deviceConnectionStateProvider)
     // revert their state before the fan-in subscription is torn down and the native
@@ -266,48 +267,48 @@ class NeiryService {
     //    in step 2 — preventing 0xebadde09 use-after-free on EventSink JNI refs.
     //    The handle stays alive so classifiers can be disposed safely in step 3.
     if (_device!.isStarted) {
-      log('[NeiryService] step 1: stopping stream (unregisters callbacks, no release)', name: 'neiry_kit');
+      nlog('[NeiryService] step 1: stopping stream (unregisters callbacks, no release)', name: 'neiry_kit');
       try {
         await _device!.stopStream();
-        log('[NeiryService] step 1 done', name: 'neiry_kit');
+        nlog('[NeiryService] step 1 done', name: 'neiry_kit');
       } catch (e) {
-        log('[NeiryService] device.stopStream error: $e', name: 'neiry_kit');
+        nlog('[NeiryService] device.stopStream error: $e', name: 'neiry_kit');
       }
     } else {
-      log('[NeiryService] step 1: skip stop (isStarted=false)', name: 'neiry_kit');
+      nlog('[NeiryService] step 1: skip stop (isStarted=false)', name: 'neiry_kit');
     }
 
     // 2. Cancel fan-in subscriptions (safe: SDK threads stopped by step 1).
-    log('[NeiryService] step 2: cancelling ${_activeSubscriptions.length} fan-in subscriptions', name: 'neiry_kit');
+    nlog('[NeiryService] step 2: cancelling ${_activeSubscriptions.length} fan-in subscriptions', name: 'neiry_kit');
     for (final s in _activeSubscriptions) {
       try {
         await s.cancel();
       } catch (e) {
-        log('[NeiryService] fan-in cancel error: $e', name: 'neiry_kit');
+        nlog('[NeiryService] fan-in cancel error: $e', name: 'neiry_kit');
       }
     }
     _activeSubscriptions.clear();
 
     // 3. Dispose classifiers (safe: SDK stopped, handle still valid — no nativeRelease yet).
-    log('[NeiryService] step 3: disposing classifiers', name: 'neiry_kit');
+    nlog('[NeiryService] step 3: disposing classifiers', name: 'neiry_kit');
     await Future.wait<void>([
       if (_nfb != null) _nfb!.dispose().catchError((Object e) {
-        log('[NeiryService] nfb.dispose error: $e', name: 'neiry_kit');
+        nlog('[NeiryService] nfb.dispose error: $e', name: 'neiry_kit');
       }),
       if (_physio != null) _physio!.dispose().catchError((Object e) {
-        log('[NeiryService] physio.dispose error: $e', name: 'neiry_kit');
+        nlog('[NeiryService] physio.dispose error: $e', name: 'neiry_kit');
       }),
       if (_emotions != null) _emotions!.dispose().catchError((Object e) {
-        log('[NeiryService] emotions.dispose error: $e', name: 'neiry_kit');
+        nlog('[NeiryService] emotions.dispose error: $e', name: 'neiry_kit');
       }),
       if (_productivity != null) _productivity!.dispose().catchError((Object e) {
-        log('[NeiryService] productivity.dispose error: $e', name: 'neiry_kit');
+        nlog('[NeiryService] productivity.dispose error: $e', name: 'neiry_kit');
       }),
       if (_cardio != null) _cardio!.dispose().catchError((Object e) {
-        log('[NeiryService] cardio.dispose error: $e', name: 'neiry_kit');
+        nlog('[NeiryService] cardio.dispose error: $e', name: 'neiry_kit');
       }),
       if (_mems != null) _mems!.dispose().catchError((Object e) {
-        log('[NeiryService] mems.dispose error: $e', name: 'neiry_kit');
+        nlog('[NeiryService] mems.dispose error: $e', name: 'neiry_kit');
       }),
     ]);
     _nfb = null;
@@ -316,26 +317,26 @@ class NeiryService {
     _productivity = null;
     _cardio = null;
     _mems = null;
-    log('[NeiryService] step 3 done: classifiers disposed', name: 'neiry_kit');
+    nlog('[NeiryService] step 3 done: classifiers disposed', name: 'neiry_kit');
 
     // 4. Disconnect: nativeUnregister(no-op) + nativeDisconnect + nativeRelease → handle=0.
     //    nativeRelease happens synchronously before the async BLE teardown
     //    (cancelOpen/close/unregisterApp), preventing stale GATT JNI ref crash.
-    log('[NeiryService] step 4: disconnecting device', name: 'neiry_kit');
+    nlog('[NeiryService] step 4: disconnecting device', name: 'neiry_kit');
     try {
       await _device!.disconnect();
-      log('[NeiryService] step 4 done', name: 'neiry_kit');
+      nlog('[NeiryService] step 4 done', name: 'neiry_kit');
     } catch (e) {
-      log('[NeiryService] device.disconnect error: $e', name: 'neiry_kit');
+      nlog('[NeiryService] device.disconnect error: $e', name: 'neiry_kit');
     }
 
     // 5. Dispose device (no-op on native: already disconnected above).
-    log('[NeiryService] step 5: disposing device', name: 'neiry_kit');
+    nlog('[NeiryService] step 5: disposing device', name: 'neiry_kit');
     try {
       await _device!.dispose();
-      log('[NeiryService] step 5 done', name: 'neiry_kit');
+      nlog('[NeiryService] step 5 done', name: 'neiry_kit');
     } catch (e) {
-      log('[NeiryService] device.dispose error: $e', name: 'neiry_kit');
+      nlog('[NeiryService] device.dispose error: $e', name: 'neiry_kit');
     }
 
     // 4. Reset device-scoped fields.
@@ -351,17 +352,23 @@ class NeiryService {
   /// Throws [StateError] when not connected.
   Future<void> start() async {
     _checkNotDisposed();
+    nlog('[NeiryService] start — _device: ${_device == null ? 'null' : 'set'} isConnected: $isConnected isStarted: $isStarted', name: 'neiry_kit');
     if (_device == null) throw StateError('Not connected');
-    await _device!.start();
+    try {
+      await _device!.start();
+      nlog('[NeiryService] start done', name: 'neiry_kit');
+    } catch (e) {
+      nlog('[NeiryService] start error: $e', name: 'neiry_kit');
+      rethrow;
+    }
   }
 
   /// Stops EEG streaming.
   ///
   /// No-op when no device is connected. Errors propagate to the caller.
   Future<void> stop() async {
-    _checkNotDisposed();
-    if (_device == null) return;
-    await _device!.stop();
+    nlog('[NeiryService] stop → disconnect', name: 'neiry_kit');
+    await disconnect();
   }
 
   // ── Dispose ────────────────────────────────────────────────────────────────

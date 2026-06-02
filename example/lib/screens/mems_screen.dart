@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
@@ -7,6 +5,7 @@ import 'package:neiry_kit/neiry_kit.dart';
 import '../providers/classifier_stream_providers.dart';
 import '../providers/device_state_providers.dart';
 import '../providers/nfb_calibration_provider.dart';
+import '../utils/nlog.dart';
 
 /// Shows live accelerometer and gyroscope readings from the MEMS classifier
 /// with an optional NFB calibration toggle.
@@ -41,7 +40,7 @@ class MemsScreen extends ConsumerWidget {
               onChanged: nfbData == null
                   ? null
                   : (val) {
-                      log('MEMS: Use NFB Calibration toggled: $val', name: 'Neiry');
+                      nlog('MEMS: Use NFB Calibration toggled: $val', name: 'Neiry');
                       ref
                           .read(useMemsCalibrationToggleProvider.notifier)
                           .state = val;

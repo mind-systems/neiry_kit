@@ -1,7 +1,7 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import 'utils/nlog.dart';
 
 import 'screens/calibration_screen.dart';
 import 'screens/classifiers_screen.dart';
@@ -61,7 +61,7 @@ class _RootScaffold extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (int index) {
-          log('Tab → ${_tabName(index)}', name: 'Neiry');
+          nlog('Tab → ${_tabName(index)}', name: 'Neiry');
           navigationShell.goBranch(index);
         },
         destinations: const [

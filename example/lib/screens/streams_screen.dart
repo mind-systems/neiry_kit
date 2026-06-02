@@ -1,11 +1,10 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
 
 import '../providers/rate_providers.dart';
 import '../providers/stream_providers.dart';
+import '../utils/nlog.dart';
 
 /// Displays all live data streams: EEG, PSD, resistance, battery, artifacts.
 class StreamsScreen extends ConsumerWidget {
@@ -96,7 +95,7 @@ void _dumpRates(WidgetRef ref) {
     'PSD callbacks  : ${_fmtHz(ref.read(psdRateProvider))}',
     '─────────────────────────────────',
   ];
-  log(lines.join('\n'), name: 'RateMonitor');
+  nlog(lines.join('\n'), name: 'RateMonitor');
 }
 
 class _RateRow extends StatelessWidget {

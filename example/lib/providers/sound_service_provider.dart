@@ -1,7 +1,7 @@
-import 'dart:developer';
-
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../utils/nlog.dart';
 
 /// Plays short WAV cues bundled in `assets/sounds/`.
 ///
@@ -15,25 +15,25 @@ class SoundService {
   Future<void> playStageStart() => _player
       .play(AssetSource('sounds/stage.wav'))
       .catchError((Object e, StackTrace st) {
-        log('playStageStart failed: $e', name: 'SoundService', error: e, stackTrace: st);
+        nlog('playStageStart failed: $e', name: 'SoundService', error: e, stackTrace: st);
       });
 
   Future<void> playDone() => _player
       .play(AssetSource('sounds/done.wav'))
       .catchError((Object e, StackTrace st) {
-        log('playDone failed: $e', name: 'SoundService', error: e, stackTrace: st);
+        nlog('playDone failed: $e', name: 'SoundService', error: e, stackTrace: st);
       });
 
   Future<void> playError() => _player
       .play(AssetSource('sounds/error.wav'))
       .catchError((Object e, StackTrace st) {
-        log('playError failed: $e', name: 'SoundService', error: e, stackTrace: st);
+        nlog('playError failed: $e', name: 'SoundService', error: e, stackTrace: st);
       });
 
   Future<void> playModeChange() => _player
       .play(AssetSource('sounds/mode.wav'))
       .catchError((Object e, StackTrace st) {
-        log('playModeChange failed: $e', name: 'SoundService', error: e, stackTrace: st);
+        nlog('playModeChange failed: $e', name: 'SoundService', error: e, stackTrace: st);
       });
 
   Future<void> dispose() => _player.dispose();

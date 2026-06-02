@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neiry_kit/neiry_kit.dart';
@@ -8,6 +6,7 @@ import '../providers/classifier_stream_providers.dart';
 import '../providers/device_state_providers.dart';
 import '../providers/nfb_calibration_provider.dart';
 import '../providers/productivity_actions_provider.dart';
+import '../utils/nlog.dart';
 
 // ── Enum label tables ──────────────────────────────────────────────────────
 
@@ -77,7 +76,7 @@ class ProductivityCardioScreen extends ConsumerWidget {
               onChanged: nfbData == null
                   ? null
                   : (val) {
-                      log('Productivity: Use NFB Calibration toggled: $val', name: 'Neiry');
+                      nlog('Productivity: Use NFB Calibration toggled: $val', name: 'Neiry');
                       ref.read(useCalibrationToggleProvider.notifier).state =
                           val;
                     },
@@ -210,7 +209,7 @@ class _ProductivityCard extends ConsumerWidget {
               child: ElevatedButton(
                 onPressed: isConnected
                     ? () {
-                        log('Productivity: Start Baseline Calibration tapped', name: 'Neiry');
+                        nlog('Productivity: Start Baseline Calibration tapped', name: 'Neiry');
                         ref
                             .read(productivityActionsProvider.notifier)
                             .startBaselineCalibration();
@@ -225,7 +224,7 @@ class _ProductivityCard extends ConsumerWidget {
               child: OutlinedButton(
                 onPressed: isConnected
                     ? () {
-                        log('Productivity: Reset Fatigue tapped', name: 'Neiry');
+                        nlog('Productivity: Reset Fatigue tapped', name: 'Neiry');
                         ref
                             .read(productivityActionsProvider.notifier)
                             .resetAccumulatedFatigue();

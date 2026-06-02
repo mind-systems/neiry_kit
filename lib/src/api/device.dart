@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
 import '../channel/channel_names.dart';
 import '../channel/enums.dart';
+import '../util/nlog.dart';
 import '../models/device_info.dart';
 import '../models/eeg_artifact_data.dart';
 import '../models/eeg_data.dart';
@@ -72,7 +72,7 @@ class Device {
         final code = (raw as Map<Object?, Object?>)['mode'] as int;
         final mode = NeiryDeviceMode.fromCode(code);
         if (mode == null && _loggedUnknownModeCodes.add(code)) {
-          log(
+          nlog(
             'Ignoring unknown NeiryDeviceMode code $code from native SDK',
             name: 'neiry_kit',
           );
@@ -166,7 +166,7 @@ class Device {
   /// Completes when the native connect call is dispatched (non-blocking —
   /// listen to [connectionStateStream] to detect the actual connection event).
   Future<void> connect({bool bipolarChannels = false}) async {
-    log('Device.connect — serial: $serial _disposed: $_disposed _connected: $_connected', name: 'neiry_kit');
+    nlog('Device.connect — serial: $serial _disposed: $_disposed _connected: $_connected', name: 'neiry_kit');
     _checkNotDisposed();
     if (_connected) throw StateError('Device is already connected');
     await _channel.invokeMethod<void>(DeviceMethods.connect, {
@@ -210,6 +210,7 @@ class Device {
   ///
   /// Throws [DeviceNotConnectedException] when called before [connect].
   Future<void> start() async {
+    nlog('Device.start — serial: $serial _disposed: $_disposed _connected: $_connected _started: $_started', name: 'neiry_kit');
     _checkNotDisposed();
     _checkConnected();
     await _channel.invokeMethod<void>(DeviceMethods.start, {
@@ -236,6 +237,7 @@ class Device {
   ///
   /// Returns `true` if the native stop succeeded.
   Future<bool> stop() async {
+    nlog('Device.stop — serial: $serial _disposed: $_disposed _connected: $_connected _started: $_started', name: 'neiry_kit');
     _checkNotDisposed();
     final result = await _channel.invokeMethod<bool>(DeviceMethods.stop, {
       NeiryArgs.serial: serial,

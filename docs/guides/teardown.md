@@ -1,5 +1,3 @@
-[← Сценарий сессии](session-guide.md) · [Back to README](../../README.md) · [Обработка ошибок →](error-handling.md)
-
 # Завершение сессии и освобождение устройства
 
 Правильный порядок вызовов при остановке стриминга и отключении устройства критичен. SDK Capsule держит нативные JNI-ссылки на BLE-объекты, и если освободить их раньше или позже нужного момента — процесс падает с `SIGABRT` или `Fatal signal 64`.
@@ -16,27 +14,23 @@
 
 Инварианты A, B и C несовместимы при наивном порядке (`stop → отмена подписок → dispose классификаторов`), поэтому `Device` предоставляет два разных метода остановки.
 
-## Два пути завершения
+## Единственный путь завершения
 
-### Путь 1 — Disconnect (полное завершение сессии)
-
-Используется когда нужно остановить стриминг и освободить устройство.
+На уровне `NeiryService` существует только одна операция завершения — **disconnect**. Кнопка «Stop» — это тоже disconnect: устройство либо подключено, либо нет.
 
 ```
-device.stopStream()          // A: unregister + nativeStop, хендл НЕ освобождается
-отменить fan-in подписки     // безопасно: фоновые потоки SDK остановлены
-dispose всех классификаторов // B: хендл ещё жив, классификаторы обращаются к SDK
+unregisterCallbacks()        // A: остановить фоновые потоки SDK
+отменить fan-in подписки     // безопасно: фоновые потоки остановлены
+dispose всех классификаторов // B: хендл ещё жив, IsClassifierSupported работает
 device.disconnect()          // C: nativeDisconnect + nativeRelease → хендл = 0
 device.dispose()             // no-op, соединение уже закрыто
 ```
 
-`stopStream()` останавливает фоновые потоки SDK (инвариант A), но **не освобождает хендл** — классификаторы могут обратиться к SDK в безопасном состоянии (инвариант B). `disconnect()` вызывает `nativeReleaseDevice` синхронно — до того как BLE-стек асинхронно обработает `unregisterApp()` (инвариант C).
-
 На практике в `NeiryService`:
 
 ```dart
-// 1. Остановить стриминг (unregister + nativeStop, без release)
-if (device.isStarted) await device.stopStream();
+// 1. Остановить фоновые потоки SDK
+await device.unregisterCallbacks();
 
 // 2. Отменить fan-in подписки
 for (final sub in activeSubscriptions) await sub.cancel();
@@ -44,30 +38,26 @@ for (final sub in activeSubscriptions) await sub.cancel();
 // 3. Dispose классификаторов (хендл ещё жив)
 await Future.wait([nfb?.dispose(), physio?.dispose(), cardio?.dispose(), ...]);
 
-// 4. Отключить и освободить хендл (nativeDisconnect + nativeRelease)
+// 4. Если шёл стриминг — остановить сессию (без release)
+if (wasStarted) await device.stopStream();
+
+// 5. Отключить и освободить хендл (nativeDisconnect + nativeRelease)
 await device.disconnect();
 
-// 5. Очистить Dart-объект
+// 6. Очистить Dart-объект
 await device.dispose();
 ```
 
-### Путь 2 — Stop only (остановка без отключения)
+`NeiryService.stop()` — алиас для `disconnect()`. Отдельной «паузы» без отключения нет.
 
-Используется когда нужно остановить стриминг, но **не** отключать BLE.  
-Реализован кнопкой «Stop» в примере приложения.
+## О `stop()` и `stopStream()` на уровне Device
 
-```dart
-await device.stop();  // unregister + nativeStop + nativeRelease → хендл = 0
-```
+Эти методы существуют на уровне `Device`, но напрямую не используются снаружи `NeiryService`:
 
-`stop()` освобождает хендл немедленно — после этого вызов `start()` без предварительного переподключения завершится ошибкой `NO_DEVICE`. Чтобы возобновить стриминг, нужно заново пройти Connect → Start.
-
-## Разница между `stop()` и `stopStream()`
-
-| Метод | nativeStop | nativeRelease | Когда использовать |
+| Метод | nativeStop | nativeRelease | Роль |
 |---|---|---|---|
-| `stop()` | ✅ | ✅ немедленно | Кнопка «Stop» — полная остановка без Disconnect |
-| `stopStream()` | ✅ | ❌ | Первый шаг в disconnect-последовательности |
+| `stopStream()` | ✅ | ❌ | Внутренний шаг в disconnect-последовательности |
+| `stop()` | ✅ | ✅ немедленно | Не используется — освобождает хендл до dispose классификаторов |
 
 ## Неправильные порядки
 
@@ -89,9 +79,3 @@ await device.connect();
 ```
 
 `DeviceLocator` не нужно пересоздавать — он синглтон и сохраняет нативный хэндл.
-
-## See Also
-
-- [Жизненный цикл устройства](../reference/device-lifecycle.md) — состояния и переходы Device
-- [Сценарий сессии](session-guide.md) — полный маршрут от сканирования до классификаторов
-- [Обработка ошибок](error-handling.md) — типы исключений и стратегии восстановления
