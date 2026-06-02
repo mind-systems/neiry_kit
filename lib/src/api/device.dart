@@ -223,10 +223,15 @@ class Device {
     if (_disposed) return;
     _disposed = true;
     _stopStateTracking();
-    // Idempotent on the native side even if already disconnected.
-    await _channel.invokeMethod<void>(DeviceMethods.disconnect, {
-      NeiryArgs.serial: serial,
-    });
+    // The Capsule SDK is NOT idempotent — calling native disconnect while a
+    // prior disconnect is still completing its async GATT teardown corrupts
+    // internal state and causes Fatal signal 64. Skip the native call when
+    // already disconnected (_connected is false after disconnect() returns).
+    if (_connected) {
+      await _channel.invokeMethod<void>(DeviceMethods.disconnect, {
+        NeiryArgs.serial: serial,
+      });
+    }
     _started = false;
     _connected = false;
     _connectionState = NeiryConnectionState.disconnected;

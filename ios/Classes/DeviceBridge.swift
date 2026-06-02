@@ -361,12 +361,6 @@ class DeviceBridge: NSObject {
             bridge.batteryHandler.send(["charge": Int(charge)])
         }
 
-        clCDevice_SetOnErrorEvent(dev) { _, msg in
-            guard let bridge = DeviceBridge.activeBridge else { return }
-            let message = msg.map { String(cString: $0) } ?? ""
-            bridge.errorHandler.send(["message": message])
-        }
-
         clCDevice_SetOnConnectionStatusChangedEvent(dev) { _, status in
             guard let bridge = DeviceBridge.activeBridge else { return }
             bridge.connectionStatusHandler.send(["state": Int(status.rawValue)])
@@ -375,6 +369,12 @@ class DeviceBridge: NSObject {
         clCDevice_SetOnModeSwitchedEvent(dev) { _, mode in
             guard let bridge = DeviceBridge.activeBridge else { return }
             bridge.modeHandler.send(["mode": Int(mode.rawValue)])
+        }
+
+        clCDevice_SetOnErrorEvent(dev) { _, msg in
+            guard let bridge = DeviceBridge.activeBridge else { return }
+            let message = msg.map { String(cString: $0) } ?? ""
+            bridge.errorHandler.send(["message": message])
         }
     }
 
