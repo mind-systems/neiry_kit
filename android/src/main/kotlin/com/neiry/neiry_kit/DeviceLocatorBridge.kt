@@ -1,7 +1,9 @@
 package com.neiry.neiry_kit
 
 import android.os.Handler
+import android.util.Log
 import io.flutter.plugin.common.EventChannel
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Kotlin bridge for `clCDeviceLocator_*`. Owns the native locator handle and
@@ -17,16 +19,19 @@ class DeviceLocatorBridge(
     private var handle: Long = 0L
 
     /**
-     * The currently active guarded sink. Used to drop stale events that arrive
-     * after a new scan has already started.
+     * The currently active guarded sink. Guards two classes of spurious endOfStream:
      *
-     * Sequence that causes stale events:
-     * 1. Scan A ends — native queues endOfStream via Handler.post(mainHandler, ...)
-     * 2. User immediately scans again — onListen registers a new Dart handler
-     * 3. Queued endOfStream fires → reaches the NEW handler → controller.close() → "No element"
+     * Class 1 — stale from previous scan:
+     * SDK queues endOfStream via Handler.post during scan A; user starts scan B before
+     * that fires; queued lambda fires on scan B's Dart handler → "No element".
+     * Guard: identity check `currentSink === this` — replaced on each onListen.
      *
-     * Wrapping each sink lets us null out `currentSink` on every new onListen,
-     * so the guarded wrapper rejects the stale event before it reaches Dart.
+     * Class 2 — deferred SDK reset (~54ms after nativeRequestDevices):
+     * Native C SDK fires endOfStream on the current scan's sink ~54ms into a new scan,
+     * resetting leftover state from the previous scan. No success or error precedes it.
+     * Guard: per-sink `eventReceived` flag — only allow endOfStream through if at least
+     * one success or error event arrived first. A scan that closes with no data is
+     * definitionally a spurious SDK reset.
      */
     @Volatile private var currentSink: EventChannel.EventSink? = null
 
@@ -110,19 +115,30 @@ class DeviceLocatorBridge(
             return
         }
 
-        // Wrap the real sink so stale events from the previous scan are dropped.
-        // When a new onListen fires, currentSink is replaced — the old wrapper's
-        // identity check fails and any pending Handler.post(endOfStream) is silently ignored.
+        // eventReceived starts false; only success or error sets it true.
+        // endOfStream is only forwarded to Dart if eventReceived is true — a scan
+        // that closes with no prior data is a spurious SDK reset and is silently dropped.
+        val eventReceived = AtomicBoolean(false)
+
         val wrappedSink = events?.let { realSink ->
             object : EventChannel.EventSink {
                 override fun success(event: Any?) {
-                    if (currentSink === this) realSink.success(event)
+                    if (currentSink === this) {
+                        eventReceived.set(true)
+                        realSink.success(event)
+                    }
                 }
                 override fun error(code: String, message: String?, details: Any?) {
-                    if (currentSink === this) realSink.error(code, message, details)
+                    if (currentSink === this) {
+                        eventReceived.set(true)
+                        realSink.error(code, message, details)
+                    }
                 }
                 override fun endOfStream() {
-                    if (currentSink === this) realSink.endOfStream()
+                    val isCurrent = currentSink === this
+                    val hasEvent  = eventReceived.get()
+                    Log.d("Neiry", "DeviceLocatorBridge.endOfStream isCurrent=$isCurrent hasEvent=$hasEvent")
+                    if (isCurrent && hasEvent) realSink.endOfStream()
                 }
             }
         }
@@ -132,6 +148,7 @@ class DeviceLocatorBridge(
         nativeBridge.nativeSetDeviceListSink(wrappedSink)
 
         try {
+            Log.d("Neiry", "DeviceLocatorBridge.onListen: nativeRequestDevices")
             nativeBridge.nativeRequestDevices(handle, deviceType, searchTime)
         } catch (e: RuntimeException) {
             val err = parseSdkError(e.message ?: "255|Unknown error")
@@ -139,10 +156,12 @@ class DeviceLocatorBridge(
             events?.error(err.code, err.message, err.details)
             events?.endOfStream()
             nativeBridge.nativeSetDeviceListSink(null)
+            return
         }
     }
 
     override fun onCancel(arguments: Any?) {
+        Log.d("Neiry", "DeviceLocatorBridge.onCancel")
         currentSink = null
         nativeBridge.nativeSetDeviceListSink(null)
     }

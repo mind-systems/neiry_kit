@@ -109,6 +109,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     try {
       await ref.read(neiryServiceProvider).connect(serial);
     } catch (e) {
+      nlog('Connect error: $e', name: 'Neiry');
       _showError(e is NeiryException ? e.message : e.toString());
     }
   }
@@ -132,6 +133,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     try {
       await ref.read(neiryServiceProvider).stop();
       ref.read(deviceIsStartedProvider.notifier).state = false;
+      _clearScan();
     } on NeiryException catch (e) {
       nlog('Stop error (NeiryException): ${e.message}', name: 'Neiry');
       _showError(e.message);
@@ -146,18 +148,42 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     try {
       await ref.read(neiryServiceProvider).disconnect();
       ref.read(deviceIsStartedProvider.notifier).state = false;
+      _clearScan();
     } on NeiryException catch (e) {
+      nlog('Disconnect error (NeiryException): ${e.message}', name: 'Neiry');
       _showError(e.message);
     } catch (e) {
+      nlog('Disconnect error: $e', name: 'Neiry');
       _showError(e.toString());
     }
   }
 
   void _showError(String message) {
     if (!mounted) return;
+    nlog('Error shown: $message', name: 'Neiry');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  // Invalidates cached scan results and clears the selected device.
+  // Must be called after every disconnect — the C SDK clears its internal
+  // device list on nativeReleaseDevice, so the old scan is stale.
+  //
+  // setState runs first so the widget stops watching the provider before
+  // ref.invalidate fires (post-frame). If invalidate fired while the provider
+  // still had a listener it would trigger an immediate unwanted re-scan.
+  void _clearScan() {
+    final params = _scanParams;
+    setState(() {
+      _scanParams = null;
+      _selectedSerial = null;
+    });
+    if (params != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.invalidate(deviceScanProvider(params));
+      });
+    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────

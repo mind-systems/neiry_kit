@@ -68,6 +68,33 @@ await device.dispose();
 | `nativeRelease` после `unregisterApp()` | `Fatal signal 64`: SDK держит устаревшие GATT JNI-ссылки |
 | `disconnect()` без предшествующего `stop()` на активной сессии | Cardio-модуль пере-включает PPG во время BLE-teardown, нестабильное состояние |
 
+## Устаревший endOfStream при повторном сканировании
+
+### Проблема
+
+При повторном вызове `DeviceLocator.requestDevices()` Flutter выбрасывает `Bad state: No element` — новый скан завершается немедленно без единого результата.
+
+Причина — устойчивая гонка на уровне Flutter binary messenger. Когда скан N завершается, Kotlin вызывает `realSink.endOfStream()`, и в Dart-очередь отправляется `null`-сообщение. Если пользователь нажимает «Скан» до того, как Dart обработал этот `null`, новый скан успевает зарегистрировать свой обработчик канала раньше. `null`-сообщение от предыдущего скана достигает нового обработчика → `controller.close()` → `.first` получает `onDone` без данных → `Bad state: No element`.
+
+Это не зависит от задержки между сканами — гонка возникает даже при нажатии через несколько секунд, потому что Dart-очередь и платформенный поток работают независимо.
+
+В логах видно, что `scan stream done` появляется **до** Kotlin-логов `onListen`, хотя физически Kotlin выполнился раньше — это артефакт смешивания UI-потока (Dart) и platform-потока (Kotlin) в logcat.
+
+### Дополнительный симптом со стороны Kotlin
+
+Нативный C SDK также посылает немедленный `endOfStream` на текущий sink примерно через 50 мс после `nativeRequestDevices` — он сбрасывает состояние предыдущего скана. Этот `endOfStream` приходит уже на **новый** sink, поэтому проверка идентичности `currentSink === this` не помогает.
+
+### Решение — два независимых слоя защиты
+
+**Dart (`DeviceLocator.requestDevices`)** — отказ от `receiveBroadcastStream`. Вместо него бинарный обработчик регистрируется напрямую через `ServicesBinding.instance.defaultBinaryMessenger.setMessageHandler`. В нём отслеживается флаг `dataReceived`:
+
+- `null`-сообщение при `dataReceived = false` → устаревший `endOfStream`, молча игнорируется, обработчик остаётся активным
+- `null`-сообщение при `dataReceived = true` → настоящий `endOfStream`, поток закрывается штатно
+
+**Kotlin (`DeviceLocatorBridge`)** — `AtomicBoolean eventReceived` на каждый `onListen`. `endOfStream` пробрасывается в Dart только если перед ним пришёл хотя бы один `success` или `error`. Это блокирует немедленный SDK-reset без данных, который возникает при повторном `nativeRequestDevices`.
+
+Оба слоя нужны: Dart-слой перехватывает устаревший `null` из Dart-очереди, Kotlin-слой перехватывает немедленный SDK-reset до того, как `null` вообще уходит в Dart.
+
 ## Повторное подключение после Disconnect
 
 После полного disconnect `Device` объект нельзя переиспользовать — он `disposed`. Для новой сессии:
@@ -79,3 +106,11 @@ await device.connect();
 ```
 
 `DeviceLocator` не нужно пересоздавать — он синглтон и сохраняет нативный хэндл.
+
+### Обязательный повторный скан перед connect
+
+`nativeReleaseDevice` очищает внутренний список найденных устройств внутри C SDK. Если вызвать `createDevice(serial)` после disconnect без предшествующего скана, SDK выбросит `Empty list of available devices`.
+
+Поэтому после каждого disconnect UI обязан сбросить кэш результатов скана и сбросить выбранный серийный номер — пользователь должен нажать «Scan» заново, прежде чем сможет нажать «Connect».
+
+В example app это реализовано через `_clearScan()` в `device_screen.dart`: `setState` убирает наблюдателя `deviceScanProvider`, а в post-frame callback вызывается `ref.invalidate` — именно в таком порядке, чтобы инвалидация провайдера без активных слушателей не спровоцировала нежелательный автоматический скан.

@@ -65,8 +65,10 @@ class DeviceLocator {
 
   static const _channel = MethodChannel(NeiryChannels.deviceLocator);
 
-  // Cached to avoid re-instantiation on every requestDevices call.
-  static const _deviceListEventChannel = EventChannel(NeiryEvents.deviceList);
+  // EventChannel device-list events arrive as raw binary messages on this name.
+  // We use the binary messenger directly (not receiveBroadcastStream) so we can
+  // apply a dataReceived guard — see requestDevices() for details.
+  static const _deviceListChannel = MethodChannel(NeiryEvents.deviceList);
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -79,7 +81,10 @@ class DeviceLocator {
   Object? _createError;
 
   bool _disposed = false;
-  StreamSubscription<dynamic>? _scanSubscription;
+
+  /// Cancels the currently active scan. Replaced on each new scan, nulled on
+  /// completion or disposal.
+  void Function()? _cancelScan;
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
@@ -104,14 +109,18 @@ class DeviceLocator {
   /// Calling [requestDevices] while a previous scan is still running cancels
   /// the previous one before starting the new scan (cancel-on-overlap).
   ///
-  /// ### FIFO ordering guarantee
+  /// ### Why we bypass receiveBroadcastStream
   ///
-  /// This method does NOT await `_nativeReady` before opening the event stream.
-  /// That is intentional: Flutter's binary messenger dispatches platform
-  /// channel messages on a FIFO queue on the platform thread. The `create`
-  /// MethodChannel call was sent during construction — before this
-  /// `receiveBroadcastStream` onListen message — so by the time the native
-  /// `StreamHandler.onListen` fires, the native locator handle already exists.
+  /// Flutter's EventChannel binary message handler is a singleton per channel
+  /// name. When scan N completes, `realSink.endOfStream()` sends a null binary
+  /// message. If scan N+1 registers its handler before Dart processes that null,
+  /// the null arrives at the new handler and closes the new scan's stream
+  /// before any data arrives ("Bad state: No element").
+  ///
+  /// We implement the binary handler directly and apply a `dataReceived` guard:
+  /// a null message is forwarded to the controller only if at least one
+  /// non-null (success/error) message arrived first. Without data the null is
+  /// a stale endOfStream from the previous scan and is silently dropped.
   Stream<List<DeviceInfo>> requestDevices({
     NeiryDeviceType type = NeiryDeviceType.any,
     int searchTime = 5,
@@ -119,56 +128,86 @@ class DeviceLocator {
     _checkNotDisposed();
 
     // Cancel any in-progress scan before starting a new one.
-    if (_scanSubscription != null) {
+    if (_cancelScan != null) {
       nlog('DeviceLocator.requestDevices: cancelling previous scan', name: 'neiry_kit');
-      _scanSubscription?.cancel();
-      _scanSubscription = null;
+      _cancelScan!();
+      _cancelScan = null;
     }
     nlog('DeviceLocator.requestDevices: starting scan type=$type searchTime=${searchTime}s', name: 'neiry_kit');
 
     final controller = StreamController<List<DeviceInfo>>();
+    bool dataReceived = false;
+    bool torn = false;
 
-    final rawStream = _deviceListEventChannel.receiveBroadcastStream({
-      NeiryArgs.deviceType: type.code,
-      NeiryArgs.searchTime: searchTime,
-    });
-
-    // Captured synchronously so cancel-on-overlap and cancel-in-dispose can
-    // identify this particular scan subscription.
-    late final StreamSubscription<dynamic> thisSub;
-
-    void clearIfCurrent() {
-      if (identical(_scanSubscription, thisSub)) _scanSubscription = null;
+    void teardown() {
+      if (torn) return;
+      torn = true;
+      ServicesBinding.instance.defaultBinaryMessenger
+          .setMessageHandler(NeiryEvents.deviceList, null);
+      _deviceListChannel
+          .invokeMethod<void>('cancel', {
+            NeiryArgs.deviceType: type.code,
+            NeiryArgs.searchTime: searchTime,
+          })
+          .catchError((_) {});
     }
 
-    thisSub = rawStream.listen(
-      (dynamic raw) {
-        if (!controller.isClosed) {
+    // Register the handler BEFORE sending 'listen' so no events are lost.
+    ServicesBinding.instance.defaultBinaryMessenger.setMessageHandler(
+      NeiryEvents.deviceList,
+      (ByteData? message) async {
+        if (torn || controller.isClosed) return null;
+
+        if (message == null) {
+          if (dataReceived) {
+            // Legitimate endOfStream after data — scan completed normally.
+            nlog('DeviceLocator.requestDevices: scan stream done', name: 'neiry_kit');
+            teardown();
+            if (!controller.isClosed) controller.close();
+          } else {
+            // Stale null: the previous scan's endOfStream arrived at this
+            // scan's handler before any data was delivered. The real BLE
+            // results will come as non-null messages — keep the handler open.
+            nlog('DeviceLocator.requestDevices: stale null dropped (no data yet)', name: 'neiry_kit');
+          }
+          return null;
+        }
+
+        // Non-null message: decode the success/error envelope.
+        try {
+          final raw = const StandardMethodCodec().decodeEnvelope(message);
           final list = (raw as List)
               .map((e) => DeviceInfo.fromMap(e as Map<Object?, Object?>))
               .toList();
           nlog('DeviceLocator.requestDevices: scan result — ${list.length} device(s)', name: 'neiry_kit');
-          controller.add(list);
+          dataReceived = true;
+          if (!controller.isClosed) controller.add(list);
+        } catch (e, st) {
+          nlog('DeviceLocator.requestDevices: scan error: $e', name: 'neiry_kit');
+          dataReceived = true;
+          if (!controller.isClosed) controller.addError(e, st);
         }
-      },
-      onError: (Object error, StackTrace stack) {
-        nlog('DeviceLocator.requestDevices: scan stream error: $error', name: 'neiry_kit');
-        if (!controller.isClosed) controller.addError(error, stack);
-      },
-      onDone: () {
-        nlog('DeviceLocator.requestDevices: scan stream done (controller.isClosed=${controller.isClosed})', name: 'neiry_kit');
-        clearIfCurrent();
-        if (!controller.isClosed) controller.close();
+        return null;
       },
     );
 
-    _scanSubscription = thisSub;
-
     controller.onCancel = () {
       nlog('DeviceLocator.requestDevices: controller cancelled', name: 'neiry_kit');
-      clearIfCurrent();
-      thisSub.cancel();
+      teardown();
     };
+
+    _cancelScan = teardown;
+
+    // Tell native to start scanning — triggers DeviceLocatorBridge.onListen.
+    _deviceListChannel
+        .invokeMethod<void>('listen', {
+          NeiryArgs.deviceType: type.code,
+          NeiryArgs.searchTime: searchTime,
+        })
+        .catchError((Object e) {
+          nlog('DeviceLocator.requestDevices: native listen failed: $e', name: 'neiry_kit');
+          if (!torn && !controller.isClosed) controller.addError(e);
+        });
 
     return controller.stream;
   }
@@ -232,8 +271,8 @@ class DeviceLocator {
     _disposed = true;
 
     // Cancel any in-progress scan before tearing down the native side.
-    await _scanSubscription?.cancel();
-    _scanSubscription = null;
+    _cancelScan?.call();
+    _cancelScan = null;
 
     // Wait for native create to finish (or fail) before dispatching destroy.
     // _nativeReady always completes normally — check _createError to know
