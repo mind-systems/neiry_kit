@@ -8,6 +8,11 @@
 
 extern void throw_sdk_error(JNIEnv* env, const clCError* error);
 
+// ─── Calibrator invalidation (defined in jni_nfb_calibrator.cpp) ──────────────
+// Clears the cached calibrator pointer when its owning device is released, so a
+// later nativeStopCalibration cannot abort by touching a dangling calibrator.
+extern "C" void invalidate_calibrator();
+
 // ─── Shared globals from jni_device_locator.cpp ───────────────────────────────
 
 extern JavaVM*   g_jvm;
@@ -264,6 +269,10 @@ Java_com_neiry_neiry_1kit_NativeBridge_nativeReleaseDevice(
 {
     if (handle == 0) return;
     clCDevice dev = (clCDevice)(uintptr_t)handle;
+    // The NFB calibrator is owned by this device's session; once released, the
+    // cached g_calibrator dangles. Drop it now (without touching the SDK) so a
+    // subsequent nativeStopCalibration after reconnect no-ops instead of aborting.
+    invalidate_calibrator();
     clCDevice_Release(dev);
 }
 

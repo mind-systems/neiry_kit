@@ -86,6 +86,21 @@ Java_com_neiry_neiry_1kit_NativeBridge_nativeStopCalibration(
     g_isQuickMode  = false;
 }
 
+// Drops the cached calibrator pointer without calling any SDK method on it.
+//
+// The clCNFBCalibrator is owned by the device's SDK session (created via
+// CreateOrGet(device)). Once that device is released its session — including the
+// calibrator's backing async_scope — is torn down, leaving g_calibrator dangling.
+// Calling SetOn*Event on a dangling calibrator schedules work on a dead scope and
+// aborts inside libCapsuleClient (uncatchable SIGABRT). nativeReleaseDevice calls
+// this so a later nativeStopCalibration sees g_calibrator == nullptr and no-ops.
+// Must NOT invoke any clCNFBCalibrator_* on the stale pointer.
+void invalidate_calibrator() {
+    g_calibrator   = nullptr;
+    g_currentStage = 0;
+    g_isQuickMode  = false;
+}
+
 JNIEXPORT void JNICALL
 Java_com_neiry_neiry_1kit_NativeBridge_nativeImportCalibration(
     JNIEnv* env, jobject,
