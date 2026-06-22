@@ -7,6 +7,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'calibration_file_manager.dart';
 import 'calibration_timer_provider.dart';
+import 'device_state_providers.dart';
 import 'nfb_calibration_provider.dart';
 
 /// Manages the full NFB calibration lifecycle — full 4-stage, quick, abort,
@@ -41,6 +42,16 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
     ref.onDispose(() {
       _sub?.cancel();
       _fullCompleter = null;
+    });
+    // Reset the on-screen calibration state when the device disconnects so the UI
+    // does not keep showing the previous session's "calibrated" result. Pairs with
+    // the native locator-session reset that makes the SDK forget the old calibration.
+    // Do NOT clear nfbCalibrationProvider — that holds the portable IndividualNfbData
+    // the "Use NFB Calibration" toggles apply on the next connect.
+    ref.listen(deviceConnectionStateProvider, (prev, next) {
+      if (next.whenOrNull(data: (s) => s) == NeiryConnectionState.disconnected) {
+        state = const AsyncValue.data(null);
+      }
     });
     return NfbCalibrator.getCalibrationData();
   }
