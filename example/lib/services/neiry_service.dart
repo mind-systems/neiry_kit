@@ -106,12 +106,16 @@ class NeiryService {
   /// six classifiers.
   ///
   /// Pass [nfbData] to initialise classifiers with individual NFB calibration.
+  /// Pass [useCalibration] to gate MEMS, Productivity, and Cardio on [nfbData];
+  /// NFB always receives calibration when [nfbData] is non-null regardless of
+  /// this flag. Construction-time only — applies on next connect by design.
   /// Throws [StateError] when called while already connected or while a
   /// previous connect call is still in flight.
   Future<void> connect(
     String serial, {
     bool bipolarChannels = false,
     IndividualNfbData? nfbData,
+    bool useCalibration = false,
   }) async {
     _checkNotDisposed();
     nlog('[NeiryService] connect — serial: $serial _connecting: $_connecting _device: ${_device == null ? 'null' : 'set'} isConnected: $isConnected', name: 'neiry_kit');
@@ -139,17 +143,19 @@ class NeiryService {
 
       // ── Construct all classifiers eagerly ──────────────────────────────────
 
+      // NFB always uses calibration when present; useCalibration gates the rest.
+      final cal = useCalibration ? _nfbData : null;
       _nfb = NfbClassifier(_device!, calibration: _nfbData);
       _physio = PhysioClassifier(_device!);
       _emotions = EmotionsClassifier(_device!);
-      _productivity = _nfbData != null
-          ? _safeProductivityWithCalibration(_device!, _nfbData!)
+      _productivity = cal != null
+          ? _safeProductivityWithCalibration(_device!, cal)
           : ProductivityClassifier(_device!);
-      _cardio = _nfbData != null
-          ? CardioClassifier.withCalibration(_device!, _nfbData!)
+      _cardio = cal != null
+          ? CardioClassifier.withCalibration(_device!, cal)
           : CardioClassifier(_device!);
-      _mems = _nfbData != null
-          ? MEMSClassifier.withCalibration(_device!, _nfbData!)
+      _mems = cal != null
+          ? MEMSClassifier.withCalibration(_device!, cal)
           : MEMSClassifier(_device!);
 
       // Set calibrator sentinel before wiring fan-in subscriptions.

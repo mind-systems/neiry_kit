@@ -9,13 +9,9 @@ import 'package:neiry_kit/neiry_kit.dart';
 /// their classifiers with individual calibration data.
 final nfbCalibrationProvider = StateProvider<IndividualNfbData?>((ref) => null);
 
-/// User preference: pass [nfbCalibrationProvider] as `nfbData` to
-/// [NeiryService.connect] for the MEMS classifier on the next connect.
-/// Read by the connect flow; flipping it while connected has no immediate
-/// effect — the new value takes effect on the next disconnect→connect cycle.
-final useMemsCalibrationToggleProvider = StateProvider<bool>((ref) => false);
-
-/// User preference: pass [nfbCalibrationProvider] as `nfbData` to
-/// [NeiryService.connect] for the Productivity and Cardio classifiers on the
-/// next connect. Same semantics as [useMemsCalibrationToggleProvider].
+/// User preference: pass [nfbCalibrationProvider] as `nfbData` with
+/// `useCalibration: true` to [NeiryService.connect] on the next connect,
+/// gating MEMS, Productivity, and Cardio classifiers on individual calibration.
+/// Flipping it while connected has no immediate effect — the new value takes
+/// effect on the next disconnect→connect cycle.
 final useCalibrationToggleProvider = StateProvider<bool>((ref) => false);

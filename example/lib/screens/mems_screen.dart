@@ -4,18 +4,13 @@ import 'package:neiry_kit/neiry_kit.dart';
 
 import '../providers/classifier_stream_providers.dart';
 import '../providers/device_state_providers.dart';
-import '../providers/nfb_calibration_provider.dart';
-import '../utils/nlog.dart';
 
-/// Shows live accelerometer and gyroscope readings from the MEMS classifier
-/// with an optional NFB calibration toggle.
+/// Shows live accelerometer and gyroscope readings from the MEMS classifier.
 class MemsScreen extends ConsumerWidget {
   const MemsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final nfbData = ref.watch(nfbCalibrationProvider);
-    final useCalibration = ref.watch(useMemsCalibrationToggleProvider);
     final isConnected = ref.watch(deviceConnectionStateProvider).asData?.value ==
         NeiryConnectionState.connected;
 
@@ -25,28 +20,6 @@ class MemsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            SwitchListTile(
-              title: const Text('Use NFB Calibration'),
-              subtitle: nfbData == null
-                  ? const Text(
-                      'Run calibration first to enable',
-                      style: TextStyle(color: Colors.grey),
-                    )
-                  : const Text(
-                      'Takes effect on next connect',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-              value: useCalibration && nfbData != null,
-              onChanged: nfbData == null
-                  ? null
-                  : (val) {
-                      nlog('MEMS: Use NFB Calibration toggled: $val', name: 'Neiry');
-                      ref
-                          .read(useMemsCalibrationToggleProvider.notifier)
-                          .state = val;
-                    },
-            ),
-            const SizedBox(height: 12),
             !isConnected
                 ? const Text('Waiting for device...')
                 : ref.watch(memsProvider).when(

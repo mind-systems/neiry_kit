@@ -10,6 +10,7 @@ import '../utils/nlog.dart';
 import '../providers/calibration_provider.dart';
 import '../providers/device_scan_provider.dart';
 import '../providers/device_state_providers.dart';
+import '../providers/nfb_calibration_provider.dart';
 import '../providers/sound_service_provider.dart';
 
 class DeviceScreen extends ConsumerStatefulWidget {
@@ -107,7 +108,13 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     // if the user reconnects after an unexpected disconnect mid-stream.
     ref.read(deviceIsStartedProvider.notifier).state = false;
     try {
-      await ref.read(neiryServiceProvider).connect(serial);
+      final nfbData = ref.read(nfbCalibrationProvider);
+      final useCal = ref.read(useCalibrationToggleProvider);
+      await ref.read(neiryServiceProvider).connect(
+            serial,
+            nfbData: nfbData,
+            useCalibration: useCal,
+          );
     } catch (e) {
       nlog('Connect error: $e', name: 'Neiry');
       _showError(e is NeiryException ? e.message : e.toString());

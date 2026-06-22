@@ -4,7 +4,6 @@ import 'package:neiry_kit/neiry_kit.dart';
 
 import '../providers/classifier_stream_providers.dart';
 import '../providers/device_state_providers.dart';
-import '../providers/nfb_calibration_provider.dart';
 import '../providers/productivity_actions_provider.dart';
 import '../utils/nlog.dart';
 
@@ -44,47 +43,21 @@ String _formatTime(DateTime t) =>
 
 // ── Screen ─────────────────────────────────────────────────────────────────
 
-/// Shows the Productivity and Cardio classifier readouts with a shared
-/// NFB calibration toggle.
+/// Shows the Productivity and Cardio classifier readouts.
 class ProductivityCardioScreen extends ConsumerWidget {
   const ProductivityCardioScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final nfbData = ref.watch(nfbCalibrationProvider);
-    final useCalibration = ref.watch(useCalibrationToggleProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Productivity & Cardio')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.all(16),
         child: Column(
           children: [
-            // ── Shared calibration toggle ──────────────────────────────────
-            SwitchListTile(
-              title: const Text('Use NFB Calibration'),
-              subtitle: nfbData == null
-                  ? const Text(
-                      'Run calibration first to enable',
-                      style: TextStyle(color: Colors.grey),
-                    )
-                  : const Text(
-                      'Takes effect on next connect',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-              value: useCalibration && nfbData != null,
-              onChanged: nfbData == null
-                  ? null
-                  : (val) {
-                      nlog('Productivity: Use NFB Calibration toggled: $val', name: 'Neiry');
-                      ref.read(useCalibrationToggleProvider.notifier).state =
-                          val;
-                    },
-            ),
-            const SizedBox(height: 12),
-            const _ProductivityCard(),
-            const SizedBox(height: 12),
-            const _CardioCard(),
+            _ProductivityCard(),
+            SizedBox(height: 12),
+            _CardioCard(),
           ],
         ),
       ),

@@ -6,6 +6,7 @@ import '../providers/calibration_provider.dart';
 import '../providers/calibration_timer_provider.dart';
 import '../providers/calibration_ui_state.dart';
 import '../providers/classifier_stream_providers.dart';
+import '../providers/nfb_calibration_provider.dart';
 import '../providers/sound_service_provider.dart';
 import '../utils/nlog.dart';
 
@@ -17,15 +18,17 @@ class CalibrationScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Calibration')),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          children: [
+          children: const [
             _CalibrationCard(),
             SizedBox(height: 12),
             _NfbCard(),
             SizedBox(height: 12),
             _CalibrationDataCard(),
+            SizedBox(height: 12),
+            _UseCalibrationCard(),
           ],
         ),
       ),
@@ -323,6 +326,40 @@ class _BandRow extends StatelessWidget {
           SizedBox(width: 60, child: Text(label)),
           Text(display),
         ],
+      ),
+    );
+  }
+}
+
+// ── Use calibration toggle card ───────────────────────────────────────────────
+
+class _UseCalibrationCard extends ConsumerWidget {
+  const _UseCalibrationCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final nfbData = ref.watch(nfbCalibrationProvider);
+    final useCal = ref.watch(useCalibrationToggleProvider);
+
+    return Card(
+      child: SwitchListTile(
+        title: const Text('Use NFB Calibration'),
+        subtitle: nfbData == null
+            ? const Text(
+                'Run calibration first to enable',
+                style: TextStyle(color: Colors.grey),
+              )
+            : const Text(
+                'Applies to Productivity, Cardio & MEMS — takes effect on next connect',
+                style: TextStyle(color: Colors.grey),
+              ),
+        value: useCal && nfbData != null,
+        onChanged: nfbData == null
+            ? null
+            : (val) {
+                nlog('Calibration: Use NFB Calibration toggled: $val', name: 'Neiry');
+                ref.read(useCalibrationToggleProvider.notifier).state = val;
+              },
       ),
     );
   }
