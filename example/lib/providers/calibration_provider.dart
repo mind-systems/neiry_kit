@@ -80,6 +80,8 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
             if (_fullCompleter != null && !_fullCompleter!.isCompleted) {
               _fullCompleter!.complete(data);
             }
+            _sub?.cancel();
+            _sub = null;
         }
       },
       onError: (Object error, StackTrace stack) {
@@ -87,6 +89,8 @@ class CalibrationNotifier extends AsyncNotifier<IndividualNfbData?> {
         if (_fullCompleter != null && !_fullCompleter!.isCompleted) {
           _fullCompleter!.completeError(error, stack);
         }
+        _sub?.cancel();
+        _sub = null;
       },
     );
 
