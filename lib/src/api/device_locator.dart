@@ -284,9 +284,11 @@ class DeviceLocator {
       return;
     }
 
-    await _channel.invokeMethod<void>(DeviceLocatorMethods.dispose);
-
-    // Allow a fresh DeviceLocator() to be created after this point.
-    _instance = null;
+    try {
+      await _channel.invokeMethod<void>(DeviceLocatorMethods.dispose);
+    } finally {
+      // Allow a fresh DeviceLocator() to be created even if destroy threw.
+      _instance = null;
+    }
   }
 }

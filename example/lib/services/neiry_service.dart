@@ -19,7 +19,7 @@ class NeiryService {
 
   // ── Locator ────────────────────────────────────────────────────────────────
 
-  final DeviceLocator _locator;
+  DeviceLocator _locator;
 
   // ── Device state ───────────────────────────────────────────────────────────
 
@@ -343,6 +343,21 @@ class NeiryService {
     _device = null;
     _nfbData = null;
     _calibrator = null;
+
+    // Tear down the locator session so the next connect builds a genuinely fresh
+    // native locator. The SDK caches clCDevice per serial inside the locator and
+    // clCDevice_Release does not evict it — reconnecting via the same locator
+    // returns the same device + the same session-scoped NFB calibrator stuck in
+    // its "already started" state, blocking re-calibration. Skipped during full
+    // service dispose(), which tears the locator down itself.
+    if (!_disposed) {
+      try {
+        await _locator.dispose();
+      } catch (e) {
+        nlog('[NeiryService] locator.dispose error: $e', name: 'neiry_kit');
+      }
+      _locator = DeviceLocator();
+    }
   }
 
   // ── Start / Stop ───────────────────────────────────────────────────────────

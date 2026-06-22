@@ -47,3 +47,7 @@ migrate_working_dir/
 
 # Neiry SDK — full release archives (only vendored artifacts in official/iOS|Android|Docs are tracked)
 official/Capsule*/
+
+# Debug log dumps
+logs*.txt
+logs*.tt
