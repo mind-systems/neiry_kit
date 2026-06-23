@@ -206,6 +206,18 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
       next.whenData((_) => ref.read(soundServiceProvider).playModeChange());
     });
 
+    // Converge UI state on spontaneous disconnect (headset power-off / BLE drop).
+    // _clearScan() is idempotent — if the user disconnected manually the button
+    // handler already called it, so this second call is a no-op.
+    ref.listen<AsyncValue<NeiryConnectionState>>(deviceConnectionStateProvider,
+        (prev, next) {
+      next.whenData((state) {
+        if (state != NeiryConnectionState.disconnected) return;
+        ref.read(deviceIsStartedProvider.notifier).state = false;
+        _clearScan();
+      });
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Device')),
       body: ListView(
