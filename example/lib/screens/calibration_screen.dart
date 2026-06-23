@@ -215,6 +215,13 @@ class _DoneContent extends ConsumerWidget {
             color: uiState.isValid ? Colors.green : Colors.red,
           ),
         ),
+        if (!uiState.isValid) ...[
+          const SizedBox(height: 4),
+          Text(
+            describeFailReason(uiState.data.failReason),
+            style: const TextStyle(color: Colors.red),
+          ),
+        ],
         const SizedBox(height: 12),
         ElevatedButton(
           onPressed: () async {

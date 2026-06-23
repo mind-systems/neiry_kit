@@ -47,3 +47,14 @@ final class CalibrationError extends CalibrationUiState {
 
   final String message;
 }
+
+/// Maps a [NfbCalibrationFailReason] to a user-facing description.
+/// Returns an empty string for [NfbCalibrationFailReason.none].
+String describeFailReason(NfbCalibrationFailReason reason) =>
+    switch (reason) {
+      NfbCalibrationFailReason.tooManyArtifacts =>
+        'Too many EEG artifacts — sit still and reduce movement',
+      NfbCalibrationFailReason.peakFrequencyAtBorder =>
+        'Alpha peak at the band border — result may be unreliable',
+      NfbCalibrationFailReason.none => '',
+    };
