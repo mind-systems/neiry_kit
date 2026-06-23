@@ -233,10 +233,18 @@ class _DoneContent extends ConsumerWidget {
         const SizedBox(height: 8),
         OutlinedButton(
           onPressed: () {
-            nlog('Calibration: Recalibrate tapped', name: 'Neiry');
+            nlog('Calibration: Start Full tapped', name: 'Neiry');
             ref.read(calibrationProvider.notifier).startFull();
           },
-          child: const Text('Recalibrate'),
+          child: const Text('Start Full Calibration'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: () {
+            nlog('Calibration: Start Quick tapped', name: 'Neiry');
+            ref.read(calibrationProvider.notifier).startQuick();
+          },
+          child: const Text('Start Quick Calibration'),
         ),
       ],
     );
