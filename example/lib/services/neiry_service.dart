@@ -124,6 +124,11 @@ class NeiryService {
 
     _connecting = true;
     try {
+      if (_device != null) {
+        nlog('[NeiryService] connect: stale device present — tearing down before reconnect', name: 'neiry_kit');
+        await disconnect();
+      }
+
       _nfbData = nfbData;
 
       nlog('[NeiryService] calling createDevice($serial)', name: 'neiry_kit');
