@@ -14,7 +14,7 @@ Example app в `example/` — основной инструмент верифи
 
 ```
 NeiryService
-  ├── scan() / connect(serial, nfbData?) / start() / stop() / disconnect()
+  ├── scan() / connect(serial, nfbData?, useCalibration?) / start() / stop() / disconnect()
   ├── eegStream, psdStream, resistanceStream, batteryStream
   ├── physioStream, emotionsStream, cardioStream
   ├── memsStream, nfbStream
@@ -41,11 +41,11 @@ Screens → ref.watch / ref.read → providers → NeiryService
 
 **Classifiers** — физиологические состояния и эмоции. Значения из `physioStateProvider` и `emotionsStateProvider`. Кнопки калибровки физио делегируют к `physioActionsProvider.notifier`.
 
-**Productivity + Cardio** — продуктивность и кардио. Переключатель «Использовать NFB-калибровку» сохраняет предпочтение и применяется при следующем подключении (SDK не позволяет пересоздавать классификаторы на ходу). Команды через `productivityActionsProvider.notifier`.
+**Productivity + Cardio** — продуктивность и кардио. Команды через `productivityActionsProvider.notifier`.
 
-**MEMS** — акселерометр и гироскоп, throttle 100 мс. Переключатель NFB-калибровки аналогичен продуктивности.
+**MEMS** — акселерометр и гироскоп, throttle 100 мс.
 
-**Calibration** — NFB-калибровка. Полная (4 стадии × 20 с) или быстрая (30 с). Импорт/экспорт `IndividualNfbData` через файловый picker. Живые значения NFB-ритмов во время и после калибровки.
+**Calibration** — NFB-калибровка. Полная (4 стадии × 20 с) или быстрая (30 с); после завершения доступны обе кнопки повторного запуска, а при невалидном результате под статусом выводится причина (`failReason`). Импорт/экспорт `IndividualNfbData` через файловый picker. Здесь же единый переключатель «Использовать NFB-калибровку»: сохраняет предпочтение и при следующем подключении применяет калибровку к MEMS, продуктивности и кардио (SDK не позволяет пересоздавать классификаторы на ходу). Живые значения NFB-ритмов во время и после калибровки.
 
 ## Запуск
 

@@ -19,18 +19,19 @@
 На уровне `NeiryService` существует только одна операция завершения — **disconnect**. Кнопка «Stop» — это тоже disconnect: устройство либо подключено, либо нет.
 
 ```
-unregisterCallbacks()        // A: остановить фоновые потоки SDK
+stopStream()                 // A: nativeUnregister + nativeStop — останавливает фоновые потоки SDK
 отменить fan-in подписки     // безопасно: фоновые потоки остановлены
 dispose всех классификаторов // B: хендл ещё жив, IsClassifierSupported работает
 device.disconnect()          // C: nativeDisconnect + nativeRelease → хендл = 0
 device.dispose()             // no-op, соединение уже закрыто
+locator.dispose() + новый    // сброс SDK-сессии (см. «Пересоздание локатора»)
 ```
 
 На практике в `NeiryService`:
 
 ```dart
-// 1. Остановить фоновые потоки SDK
-await device.unregisterCallbacks();
+// 1. Остановить стриминг и фоновые потоки SDK (nativeUnregister + nativeStop)
+if (wasStarted) await device.stopStream();
 
 // 2. Отменить fan-in подписки
 for (final sub in activeSubscriptions) await sub.cancel();
@@ -38,15 +39,18 @@ for (final sub in activeSubscriptions) await sub.cancel();
 // 3. Dispose классификаторов (хендл ещё жив)
 await Future.wait([nfb?.dispose(), physio?.dispose(), cardio?.dispose(), ...]);
 
-// 4. Если шёл стриминг — остановить сессию (без release)
-if (wasStarted) await device.stopStream();
-
-// 5. Отключить и освободить хендл (nativeDisconnect + nativeRelease)
+// 4. Отключить и освободить хендл (nativeDisconnect + nativeRelease)
 await device.disconnect();
 
-// 6. Очистить Dart-объект
+// 5. Очистить Dart-объект
 await device.dispose();
+
+// 6. Пересоздать локатор — сбрасывает SDK-сессию для повторной калибровки
+await locator.dispose();
+locator = DeviceLocator();
 ```
+
+`stopStream()` идёт первым: внутри он делает `nativeUnregister + nativeStop` и останавливает все фоновые потоки SDK одним вызовом — до того, как отменяются подписки (шаг 2) и освобождаются классификаторы (шаг 3).
 
 `NeiryService.stop()` — алиас для `disconnect()`. Отдельной «паузы» без отключения нет.
 
@@ -56,7 +60,7 @@ await device.dispose();
 
 | Метод | nativeStop | nativeRelease | Роль |
 |---|---|---|---|
-| `stopStream()` | ✅ | ❌ | Внутренний шаг в disconnect-последовательности |
+| `stopStream()` | ✅ | ❌ | Первый шаг disconnect — останавливает фоновые потоки SDK |
 | `stop()` | ✅ | ✅ немедленно | Не используется — освобождает хендл до dispose классификаторов |
 
 ## Неправильные порядки
@@ -97,15 +101,18 @@ await device.dispose();
 
 ## Повторное подключение после Disconnect
 
-После полного disconnect `Device` объект нельзя переиспользовать — он `disposed`. Для новой сессии:
+После полного disconnect `Device` объект нельзя переиспользовать — он `disposed`. Для новой сессии создаётся новый `Device` через актуальный `DeviceLocator`:
 
 ```dart
-// Новый Device через тот же DeviceLocator
 final device = await locator.createDevice(serial);
 await device.connect();
 ```
 
-`DeviceLocator` не нужно пересоздавать — он синглтон и сохраняет нативный хэндл.
+### Пересоздание локатора
+
+В конце `disconnect()` пересоздаёт `DeviceLocator` (`locator.dispose()` → `clCDeviceLocator_Destroy`, затем новый `DeviceLocator()`). Это сбрасывает SDK-сессию: SDK кэширует `clCDevice` по серийному номеру внутри локатора, и `clCDevice_Release` его не вытесняет — реконнект через тот же локатор вернул бы тот же `clCDevice` со старым состоянием калибратора, из-за чего повторная полная калибровка падала бы с `code 255`. Свежий локатор даёт чистую сессию.
+
+`connect()` и `scan()` читают поле локатора в момент вызова, поэтому автоматически используют пересозданный экземпляр.
 
 ### Обязательный повторный скан перед connect
 
@@ -114,3 +121,11 @@ await device.connect();
 Поэтому после каждого disconnect UI обязан сбросить кэш результатов скана и сбросить выбранный серийный номер — пользователь должен нажать «Scan» заново, прежде чем сможет нажать «Connect».
 
 В example app это реализовано через `_clearScan()` в `device_screen.dart`: `setState` убирает наблюдателя `deviceScanProvider`, а в post-frame callback вызывается `ref.invalidate` — именно в таком порядке, чтобы инвалидация провайдера без активных слушателей не спровоцировала нежелательный автоматический скан.
+
+## Неожиданный обрыв связи
+
+Когда гарнитуру выключают или BLE-соединение рвётся, SDK эмитит `NeiryConnectionState.disconnected` в `connectionStateStream` — с задержкой ~7 секунд после физического разрыва (на Android сначала срабатывает GATT-таймаут, событие SDK приходит позже).
+
+`NeiryService` подписан на это событие и на неинициированный `disconnected` запускает ту же последовательность завершения, что и ручной disconnect (остановка стриминга → отмена подписок → dispose классификаторов → освобождение устройства → пересоздание локатора). Без неё нативные модули остались бы зарегистрированными, и следующий `connect` упал бы с `… module already exists` (`0xebadde09` / `Fatal signal 64`).
+
+`connect()` дополнительно защищён: если на момент вызова устройство ещё не освобождено (окно ~7 секунд до прихода события), он сначала выполняет disconnect и только потом создаёт новое устройство.
