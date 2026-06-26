@@ -96,6 +96,7 @@ android {
 dependencies {
     // Capsule SDK — extracted JARs (direct .aar deps are forbidden in library modules)
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
