@@ -2,6 +2,15 @@
 
 Demonstrates how to use the neiry_kit plugin.
 
+## Building a release APK
+
+```bash
+cd example
+flutter build apk --release
+```
+
+The APK is written to `build/app/outputs/flutter-apk/app-release.apk`.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
