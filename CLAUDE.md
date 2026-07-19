@@ -1,7 +1,3 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## What this repository is
 
 `neiry_kit` is a **Flutter plugin** that wraps the native Neiry/Capsule neurofeedback SDK for iOS and Android, plus an example app to test all functionality end-to-end before integrating into `mind_mobile`.
