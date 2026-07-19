@@ -109,7 +109,3 @@ dart run build_runner build --delete-conflicting-outputs
 ## Integration into mind_mobile
 
 Once the Dart API is stable here, `mind_mobile` adds `neiry_kit` as a path or pub dependency. Do not copy native binaries — they live here only.
-
-## Language
-
-All files in this repo must be written in English regardless of conversation language.
